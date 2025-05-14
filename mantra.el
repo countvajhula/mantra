@@ -3,7 +3,7 @@
 ;; Author: Sid Kasivajhula <sid@countvajhula.com>
 ;; URL: https://github.com/countvajhula/mantra
 ;; Version: 0.0
-;; Package-Requires: ((pubsub "0.0"))
+;; Package-Requires: ((emacs "25.1") (pubsub "0.0"))
 
 ;; This file is NOT a part of Gnu Emacs.
 
@@ -99,12 +99,12 @@ interest, a STOP condition to determine the end, and an ABORT
 condition to abort parsing.
 
 The START condition is checked in `pre-command-hook' and STOP and
-ABORT conditions are checked in `post-command-hook'. Once START is
+ABORT conditions are checked in `post-command-hook'.  Once START is
 satisfied, the key sequences are accumulated in the parser state as a
-composed key sequence (vector). When STOP is satisfied (which might
+composed key sequence (vector).  When STOP is satisfied (which might
 happen during invocation of the same command, or it might not), a
 match event is generated containing the entire sequence in STATE as a
-single key sequence vector. If ABORT is satisfied during parsing, the
+single key sequence vector.  If ABORT is satisfied during parsing, the
 state is cleared."
   (vector name
           start
@@ -154,14 +154,15 @@ than forwarding empty sequences."
 
 (defun mantra-parsing-in-progress-p (parser)
   "Whether PARSER is already parsing, i.e., accumulating state."
-  (let ((state (mantra-parser-state parser)))
-    (not (seq-empty-p state))))
+  (not
+   (seq-empty-p
+    (mantra-parser-state parser))))
 
 (defun mantra-parse (parser key-seq)
   "Parse KEY-SEQ using PARSER.
 
 If PARSER is already parsing (i.e., it already has state), then append
-KEY-SEQ to PARSER's current state. Otherwise, begin parsing by
+KEY-SEQ to PARSER's current state.  Otherwise, begin parsing by
 initializing PARSER's state to KEY-SEQ if the start condition is met.
 Otherwise, do nothing."
   (when (or (mantra-parsing-in-progress-p parser)
@@ -173,7 +174,7 @@ Otherwise, do nothing."
   "Accept the current state in PARSER.
 
 This publishes the parsed key sequence under the topic with PARSER's
-name. Note that as the pub/sub system is not persistent, it does not
+name.  Note that as the pub/sub system is not persistent, it does not
 store any parsed key sequences after notifying subscribers of them.
 
 After publishing the match, this clears the parser state."
@@ -190,7 +191,7 @@ After publishing the match, this clears the parser state."
 (defun mantra-parse-finish (parser key-seq)
   "Accept or abort parsing by PARSER.
 
-KEY-SEQ is the current key sequence. Aborting or accepting is based on
+KEY-SEQ is the current key sequence.  Aborting or accepting is based on
 the entire parsed state in PARSER, not just the current key sequence."
   ;; state already includes key-seq by this point,
   ;; as this is being called in post-command
