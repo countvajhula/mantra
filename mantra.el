@@ -90,7 +90,7 @@
   "Clear the PARSER's state."
   (mantra-parser-set-state parser (vector)))
 
-(defun mantra-make-parser (name start end abort)
+(defun mantra-make-parser (name start end &optional abort)
   "Make a PARSER named NAME with START, END, and ABORT conditions.
 
 A parser is a set of criteria for storing key sequences in it in the
@@ -105,12 +105,14 @@ composed key sequence (vector).  When STOP is satisfied (which might
 happen during invocation of the same command, or it might not), a
 match event is generated containing the entire sequence in STATE as a
 single key sequence vector.  If ABORT is satisfied during parsing, the
-state is cleared."
-  (vector name
-          start
-          end
-          abort
-          (vector)))
+state is cleared. If no ABORT condition is specified, a default one is
+used that never aborts."
+  (let ((abort (or abort (lambda (_key-seq) nil))))
+    (vector name
+            start
+            end
+            abort
+            (vector))))
 
 (defvar mantra-basic-parser
   (mantra-make-parser "basic"
