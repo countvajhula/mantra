@@ -53,16 +53,13 @@
 (defconst mantra--index-abort 3
   "The index of the condition to abort parsing.")
 
-(defconst mantra--index-accept 4
-  "The index of the accept function in a parser.")
-
-(defconst mantra--index-map 5
+(defconst mantra--index-map 4
   "The index of the map function in a parser.")
 
-(defconst mantra--index-compose 6
+(defconst mantra--index-compose 5
   "The index of the compose function in a parser.")
 
-(defconst mantra--index-state 7
+(defconst mantra--index-state 6
   "The index of the state variable in a parser.")
 
 (defun mantra-parser-name (parser)
@@ -80,10 +77,6 @@
 (defun mantra-parser-abort (parser)
   "Condition to abort parsing for PARSER."
   (seq-elt parser mantra--index-abort))
-
-(defun mantra-parser-accept (parser)
-  "Function to compute the result of parsing for PARSER."
-  (seq-elt parser mantra--index-accept))
 
 (defun mantra-parser-map (parser)
   "Function to apply to each parsed key sequence in PARSER."
@@ -115,7 +108,6 @@ sequence."
                            stop
                            &optional
                            abort
-                           accept
                            map
                            compose)
   "Make a PARSER named NAME with START, STOP, and ABORT conditions.
@@ -136,25 +128,28 @@ state is cleared. If no ABORT condition is specified, a default one is
 used that never aborts.
 
 MAP and COMPOSE define how the result of parsing is constructed and
-composed. MAP is a function of one argument that is invoked with each
-fresh key sequence. The result is then combined with the accumulated
-parser state using COMPOSE, which is a function of two arguments, the
-first being the accumulated state and the second, the result of applying
-MAP to the fresh key sequence to be incorporated.
+composed. MAP is a function of one argument that is invoked with the
+fresh key sequence at each step during parsing. The result is then
+combined with the accumulated parser state using COMPOSE, which is a
+function that will be invoked with two arguments, the first being the
+accumulated state and the second, the result of applying MAP to the
+fresh key sequence at that step.
 
-If an ACCEPT function is provided, it is invoked with the final state
-when accepting a key sequence. The result of invocation is published
-as the result of parsing. If no ACCEPT function is provided, a default
-one is used that simply publishes the parsed key sequence."
+If no MAP function is provided, the identity function is used as the
+default, so that the parsed value at each step is simply the input key
+sequence. If no COMPOSE function is provided, it defaults to `vconcat'
+which is appropriate for composing key sequence vectors (i.e., the
+default values if no MAP is specified).
+
+The state at the time of acceptance is published as the result of
+parsing."
   (let ((abort (or abort (lambda (_key-seq) nil)))
-        (accept (or accept #'identity))
         (map (or map #'identity))
         (compose (or compose #'vconcat)))
     (vector name
             start
             stop
             abort
-            accept
             map
             compose
             (vector))))
@@ -229,11 +224,12 @@ store any parsed key sequences after notifying subscribers of them.
 After publishing the match, this clears the parser state."
   (let ((state (mantra-parser-state parser)))
     (if (seq-empty-p state)
+        ;; TODO: maybe we can't have this null check,
+        ;; since custom types may be composed that
+        ;; wouldn't be considered sequences
         (error "Can't accept empty key sequence!")
-      (let ((name (mantra-parser-name parser))
-            (result (funcall (mantra-parser-accept parser)
-                             state)))
-        (pubsub-publish name result)
+      (let ((name (mantra-parser-name parser)))
+        (pubsub-publish name state)
         ;; clear state
         (mantra-parser-clear-state parser)))))
 

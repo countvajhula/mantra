@@ -101,10 +101,7 @@
       ;; perhaps aid garbage collection
       (setq parser nil))))
 
-(defvar fixture-accepted-result "abcdefg"
-  "A dummy accepted result.")
-
-;; parser with nondefault map, compose, and accept predicates
+;; parser with nondefault map and compose predicates
 (defun fixture-parser-nondefault (body)
   (let ((parser nil))
     (unwind-protect
@@ -112,7 +109,6 @@
                                                 (lambda (_key-seq) t)
                                                 (lambda (_key-seq) t)
                                                 (lambda (_key-seq) nil)
-                                                (lambda (_state) fixture-accepted-result)
                                                 #'key-description
                                                 #'concat))
                (funcall body))
@@ -190,13 +186,6 @@
   ;; mantra-parser-state
   (with-fixture fixture-parser-basic
     (should (vectorp (mantra-parser-state parser))))
-
-  ;; mantra-parser-accept
-  (with-fixture fixture-parser-basic
-    ;; defaults to identity function
-    (should (equal "abc"
-                   (funcall (mantra-parser-accept parser)
-                            "abc"))))
 
   ;; mantra-parser-map
   (with-fixture fixture-parser-basic
@@ -278,11 +267,6 @@
      (mantra-accept parser)
      (should (equal fixture-single-key
                     result))))
-  (with-fixture fixture-nondefault-parser-with-state
-    (with-fixture fixture-subscriber
-      (mantra-accept parser)
-      (should (equal fixture-accepted-result
-                     result))))
   (with-fixture fixture-parser-with-state
     ;; clears state
     (mantra-accept parser)
