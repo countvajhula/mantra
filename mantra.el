@@ -56,7 +56,13 @@
 (defconst mantra--index-accept 4
   "The index of the accept function in a parser.")
 
-(defconst mantra--index-state 5
+(defconst mantra--index-map 5
+  "The index of the map function in a parser.")
+
+(defconst mantra--index-compose 6
+  "The index of the compose function in a parser.")
+
+(defconst mantra--index-state 7
   "The index of the state variable in a parser.")
 
 (defun mantra-parser-name (parser)
@@ -79,6 +85,19 @@
   "Function to compute the result of parsing for PARSER."
   (seq-elt parser mantra--index-accept))
 
+(defun mantra-parser-map (parser)
+  "Function to apply to each parsed key sequence in PARSER."
+  (seq-elt parser mantra--index-map))
+
+(defun mantra-parser-compose (parser)
+  "Function to compute the fresh state in PARSER.
+
+This value is a binary function, i.e., a function taking two
+arguments, where the first is the accumulated parser state and the
+second is the result of applying the \"map\" function to the fresh key
+sequence."
+  (seq-elt parser mantra--index-compose))
+
 (defun mantra-parser-state (parser)
   "Get accumulated state in PARSER."
   (seq-elt parser mantra--index-state))
@@ -87,17 +106,18 @@
   "Set state on PARSER to NEW-STATE."
   (aset parser mantra--index-state new-state))
 
-(defun mantra-parser-append-state (parser new-state)
-  "Append NEW-STATE to PARSER's existing state."
-  (mantra-parser-set-state parser
-                           (vconcat (mantra-parser-state parser)
-                                    new-state)))
-
 (defun mantra-parser-clear-state (parser)
   "Clear the PARSER's state."
   (mantra-parser-set-state parser (vector)))
 
-(defun mantra-make-parser (name start stop &optional abort accept)
+(defun mantra-make-parser (name
+                           start
+                           stop
+                           &optional
+                           abort
+                           accept
+                           map
+                           compose)
   "Make a PARSER named NAME with START, STOP, and ABORT conditions.
 
 A parser is a set of criteria for storing key sequences in it in the
@@ -115,17 +135,28 @@ single key sequence vector.  If ABORT is satisfied during parsing, the
 state is cleared. If no ABORT condition is specified, a default one is
 used that never aborts.
 
+MAP and COMPOSE define how the result of parsing is constructed and
+composed. MAP is a function of one argument that is invoked with each
+fresh key sequence. The result is then combined with the accumulated
+parser state using COMPOSE, which is a function of two arguments, the
+first being the accumulated state and the second, the result of applying
+MAP to the fresh key sequence to be incorporated.
+
 If an ACCEPT function is provided, it is invoked with the final state
 when accepting a key sequence. The result of invocation is published
 as the result of parsing. If no ACCEPT function is provided, a default
 one is used that simply publishes the parsed key sequence."
   (let ((abort (or abort (lambda (_key-seq) nil)))
-        (accept (or accept #'identity)))
+        (accept (or accept #'identity))
+        (map (or map #'identity))
+        (compose (or compose #'vconcat)))
     (vector name
             start
             stop
             abort
             accept
+            map
+            compose
             (vector))))
 
 (defvar mantra-basic-parser
@@ -183,7 +214,10 @@ Otherwise, do nothing."
   (when (or (mantra-parsing-in-progress-p parser)
             (funcall (mantra-parser-start parser)
                      key-seq))
-    (mantra-parser-append-state parser key-seq)))
+    (mantra-parser-set-state parser
+                             (funcall (mantra-parser-compose parser)
+                                      (mantra-parser-state parser)
+                                      (funcall (mantra-parser-map parser) key-seq)))))
 
 (defun mantra-accept (parser)
   "Accept the current state in PARSER.

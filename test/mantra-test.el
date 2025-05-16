@@ -48,11 +48,25 @@
     (lambda ()
       ,@test)))
 
+(defconst fixture-parser-basic-name "basic")
+
 (defconst fixture-parser-accept-all-name "all")
 
 (defconst fixture-parser-accept-none-name "none")
 
 (defconst fixture-parser-abort-all-name "abort")
+
+(defconst fixture-parser-nondefault-name "nondefault")
+
+(defun fixture-parser-basic (body)
+  (let ((parser nil))
+    (unwind-protect
+        (progn (setq parser (mantra-make-parser fixture-parser-basic-name
+                                                (lambda (_key-seq) t)
+                                                (lambda (_key-seq) t)))
+               (funcall body))
+      ;; perhaps aid garbage collection
+      (setq parser nil))))
 
 (defun fixture-parser-accept-all (body)
   (let ((parser nil))
@@ -90,14 +104,17 @@
 (defvar fixture-accepted-result "abcdefg"
   "A dummy accepted result.")
 
-(defun fixture-parser-nondefault-accept (body)
+;; parser with nondefault map, compose, and accept predicates
+(defun fixture-parser-nondefault (body)
   (let ((parser nil))
     (unwind-protect
-        (progn (setq parser (mantra-make-parser fixture-parser-accept-all-name
+        (progn (setq parser (mantra-make-parser fixture-parser-nondefault-name
                                                 (lambda (_key-seq) t)
                                                 (lambda (_key-seq) t)
                                                 (lambda (_key-seq) nil)
-                                                (lambda (_state) fixture-accepted-result)))
+                                                (lambda (_state) fixture-accepted-result)
+                                                #'key-description
+                                                #'concat))
                (funcall body))
       ;; perhaps aid garbage collection
       (setq parser nil))))
@@ -121,8 +138,8 @@
     (mantra-parser-set-state parser fixture-single-key)
     (funcall body-2)))
 
-(defun fixture-parser-with-state-and-nondefault-accept (body-3)
-  (with-fixture fixture-parser-nondefault-accept
+(defun fixture-nondefault-parser-with-state (body-3)
+  (with-fixture fixture-parser-nondefault
     (mantra-parser-set-state parser fixture-single-key)
     (funcall body-3)))
 
@@ -147,47 +164,60 @@
 
 (ert-deftest mantra-parser-test ()
   ;; null constructor
-  (should (vectorp (mantra-make-parser "test"
-                                       (lambda (_key-seq) t)
-                                       (lambda (_key-seq) t)
-                                       (lambda (_key-seq) nil))))
+  (with-fixture fixture-parser-basic
+    (should (vectorp parser)))
+
+  (with-fixture fixture-parser-basic
+    (should (vectorp parser)))
 
   ;; mantra-parser-name
-  (with-fixture fixture-parser-accept-all
-    (should (stringp (mantra-parser-name parser))))
+  (with-fixture fixture-parser-basic
+    (should (equal fixture-parser-basic-name
+                   (mantra-parser-name parser))))
 
   ;; mantra-parser-start
   (with-fixture fixture-parser-accept-all
-    (should (functionp (mantra-parser-start parser))))
+    (should (funcall (mantra-parser-start parser) "abc")))
 
   ;; mantra-parser-stop
   (with-fixture fixture-parser-accept-all
-    (should (functionp (mantra-parser-stop parser))))
+    (should (funcall (mantra-parser-stop parser) "abc")))
 
   ;; mantra-parser-abort
   (with-fixture fixture-parser-accept-all
-    (should (functionp (mantra-parser-abort parser))))
+    (should-not (funcall (mantra-parser-abort parser) "abc")))
 
   ;; mantra-parser-state
-  (with-fixture fixture-parser-accept-all
+  (with-fixture fixture-parser-basic
     (should (vectorp (mantra-parser-state parser))))
 
   ;; mantra-parser-accept
-  (with-fixture fixture-parser-accept-all
+  (with-fixture fixture-parser-basic
     ;; defaults to identity function
     (should (equal "abc"
                    (funcall (mantra-parser-accept parser)
-                            "abc")))))
+                            "abc"))))
+
+  ;; mantra-parser-map
+  (with-fixture fixture-parser-basic
+    ;; defaults to identity function
+    (should (equal "abc"
+                   (funcall (mantra-parser-map parser)
+                            "abc"))))
+
+  ;; mantra-parser-compose
+  (with-fixture fixture-parser-accept-all
+    ;; defaults to vconcat
+    (should (equal [1 2 3]
+                   (funcall (mantra-parser-compose parser)
+                            []
+                            [1 2 3])))))
 
 (ert-deftest mantra-state-test ()
   (with-fixture fixture-parser-accept-all
     (should (seq-empty-p (mantra-parser-state parser))))
   (with-fixture fixture-parser-with-state
     (should-not (seq-empty-p (mantra-parser-state parser))))
-  (with-fixture fixture-parser-with-state
-    (mantra-parser-append-state parser [1 2 3])
-    (should (equal (vconcat fixture-single-key [1 2 3])
-                   (mantra-parser-state parser))))
   (with-fixture fixture-parser-with-state
     (mantra-parser-clear-state parser)
     (should (seq-empty-p (mantra-parser-state parser)))))
@@ -232,7 +262,14 @@
     (mantra-parser-set-state parser fixture-single-key)
     (mantra-parse parser
                   fixture-single-key)
-    (should (mantra-parsing-in-progress-p parser))))
+    (should (mantra-parsing-in-progress-p parser)))
+  (with-fixture fixture-parser-nondefault
+    ;; values are mapped and composed with state
+    (mantra-parser-set-state parser "a b c ")
+    (mantra-parse parser
+                  [100 101 102])
+    (should (equal "a b c d e f"
+                   (mantra-parser-state parser)))))
 
 (ert-deftest mantra-accept-test ()
   (with-fixture fixture-parser-with-state
@@ -241,7 +278,7 @@
      (mantra-accept parser)
      (should (equal fixture-single-key
                     result))))
-  (with-fixture fixture-parser-with-state-and-nondefault-accept
+  (with-fixture fixture-nondefault-parser-with-state
     (with-fixture fixture-subscriber
       (mantra-accept parser)
       (should (equal fixture-accepted-result
