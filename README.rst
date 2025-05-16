@@ -16,16 +16,20 @@ mantra
 ===========
 Parse and compose keyboard activity in Emacs.
 
-Mantra allows you to define "regex"-like patterns on your keyboard activity in terms of start, stop, and abort conditions (which could be anything, not necessarily based on the key sequence typed). Whenever one of these patterns is encountered, the corresponding parser records the matching sequence of keystrokes and publishes it using a basic pub/sub system for additional handling by any subscribers you define.
+Mantra allows you to define "regex"-like patterns on your keyboard activity in terms of start, stop, and abort conditions, together with parsers that transform this keyboard activity (within the context of the surrounding Emacs environment) into arbitrary structured data.
 
-Mantra is purely syntax, without semantics. It does not bind key sequences to commands or even know what commands parsed sequences may be bound to.
+The pattern conditions could be anything, not only based on the key sequence typed. Likewise, the parsers are defined in terms of mapping and composing parsed key sequences within the context of the full surrounding Emacs environment at each step, so that the parsed result could also be just about anything in the context of your activity.
 
-Examples of using this parsed data could include storing and reciting certain mantras in certain contexts, or analyzing keyboard activity for frequent patterns to give you an idea of where to focus your energies toward improving editing efficiency.
+Whenever one of the defined patterns is encountered, the corresponding parser records the structured data (by default, simply the matching sequence of keystrokes) and publishes it using a basic pub/sub system for additional handling by any subscribers you define.
+
+Mantra is purely syntax, without semantics. It does not bind key sequences to commands or even know what commands parsed sequences may be bound to. The patterns and parsers are defined by you and may be associated with any actions that you see fit to perform, independently of any configured keybindings for these key sequences.
+
+Although you may find this package useful as an end user, for instance, for implicitly storing and reciting certain mantras in certain contexts, or analyzing keyboard activity for frequent patterns to give you an idea of where to focus your energies toward improving editing efficiency, the package is more likely to be useful to package developers to power higher-level features tied to your activity within Emacs, and could, for example, conceivably be used to implement packages resembling yasnippet, evil-repeat, Emacs's keyboard macro ring, Evil macros, and much more.
 
 Installation
 ------------
 
-mantra is not on a package archive such as `MELPA <https://melpa.org/>`_ yet, but you can install it using `Straight.el <https://github.com/radian-software/straight.el>`_ (or `Elpaca <https://github.com/progfolio/elpaca>`_) by putting this somewhere in your :code:`.emacs.d`:
+Mantra is not on a package archive such as `MELPA <https://melpa.org/>`_ yet, but you can install it using `Straight.el <https://github.com/radian-software/straight.el>`_ (or `Elpaca <https://github.com/progfolio/elpaca>`_) by putting this somewhere in your :code:`.emacs.d`:
 
 .. code-block:: elisp
 
@@ -39,18 +43,12 @@ mantra is not on a package archive such as `MELPA <https://melpa.org/>`_ yet, bu
 How It Works
 ------------
 
-Upon each key sequence being entered by you on the `Emacs command loop <https://www.gnu.org/software/emacs/manual/html_node/elisp/Command-Overview.html>`_, a listener (on the pre-command and post-command hooks) does basic "lexing" on this input to ensure that it isn't an empty or otherwise invalid sequence. Then, it notifies every configured repeat ring of the key sequence. Each ring checks its own condition to start recording the sequence. If the condition is met, or if recording is already in progress, then the key sequence is accumulated in a local state variable until either a stop condition is met (in which case the full composite sequence is stored in the ring), or an abort condition is met (in which case the state is cleared and is not stored).
-
-The repeat rings themselves are fixed-size ring data structures, so that they contain a history of length N, with the oldest key sequences being overwritten as new ones are recorded.
-
-Finally, the repeat rings are all stored in a dynamically sized ring of repeat rings that is aware of recency.
-
-Key sequences on each repeat ring may be "repeated" simply by executing them as keyboard macros, via ``execute-kbd-macro``. The function ``mantra-repeat`` simply repeats the macro on the most recently used repeat ring.
+Upon each key sequence being entered by you on the `Emacs command loop <https://www.gnu.org/software/emacs/manual/html_node/elisp/Command-Overview.html>`_, a listener (on the pre-command and post-command hooks) does basic "lexing" on this input to ensure that it isn't an empty or otherwise invalid sequence. Then, it notifies every configured parser of the key sequence. Each parser checks its own condition to start recording the sequence. If the condition is met, or if recording is already in progress, then the key sequence (or any parsed representation within the context of this sequence and the Emacs environment) is accumulated in a local state variable until either a stop condition is met (in which case the full composite state is published as the result of parsing), or an abort condition is met (in which case the state is simply cleared so that parsing may begin afresh).
 
 Further Reading
 ---------------
 
-This package generalizes Vim's dot operator and is based on the perspective developed in `A Vimlike Fluency <https://countvajhula.com/2021/01/21/vim-tip-of-the-day-a-series/>`_, especially:
+This package is informed by the perspective developed in `A Vimlike Fluency <https://countvajhula.com/2021/01/21/vim-tip-of-the-day-a-series/>`_, especially:
 
 - `Living the High Life <https://countvajhula.com/2021/02/02/vim-tip-of-the-day-living-the-high-life/>`_
 - `Saying More (Macros) <https://countvajhula.com/2021/02/08/vim-tip-of-the-day-saying-more-macros/>`_
