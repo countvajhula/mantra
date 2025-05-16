@@ -91,6 +91,18 @@ second is the result of applying the \"map\" function to the fresh key
 sequence."
   (seq-elt parser mantra--index-compose))
 
+(defun mantra-parser-null-state (parser)
+  "The null parsing state inferred for the current PARSER.
+
+This is the state the parser is always initialized to, and if it is
+the current state of the parser, then that means that it isn't
+currently in the middle of parsing something.
+
+The null state is derived from applying the parser's `map' function to
+the empty vector."
+  (funcall (mantra-parser-map parser)
+           (vector)))
+
 (defun mantra-parser-state (parser)
   "Get accumulated state in PARSER."
   (seq-elt parser mantra--index-state))
@@ -101,7 +113,8 @@ sequence."
 
 (defun mantra-parser-clear-state (parser)
   "Clear the PARSER's state."
-  (mantra-parser-set-state parser (vector)))
+  (mantra-parser-set-state parser
+                           (mantra-parser-null-state parser)))
 
 (defun mantra-make-parser (name
                            start
@@ -155,7 +168,8 @@ parsing."
             abort
             map
             compose
-            (vector))))
+            ;; initialize to null state
+            (funcall map (vector)))))
 
 (defvar mantra-basic-parser
   (mantra-make-parser "basic"
@@ -198,9 +212,8 @@ than forwarding empty sequences."
 
 (defun mantra-parsing-in-progress-p (parser)
   "Whether PARSER is already parsing, i.e., accumulating state."
-  (not
-   (seq-empty-p
-    (mantra-parser-state parser))))
+  (not (equal (mantra-parser-null-state parser)
+              (mantra-parser-state parser))))
 
 (defun mantra-parse (parser key-seq)
   "Parse KEY-SEQ using PARSER.
@@ -225,16 +238,11 @@ name.  Note that as the pub/sub system is not persistent, it does not
 store any parsed key sequences after notifying subscribers of them.
 
 After publishing the match, this clears the parser state."
-  (let ((state (mantra-parser-state parser)))
-    (if (seq-empty-p state)
-        ;; TODO: maybe we can't have this null check,
-        ;; since custom types may be composed that
-        ;; wouldn't be considered sequences
-        (error "Can't accept empty key sequence!")
-      (let ((name (mantra-parser-name parser)))
-        (pubsub-publish name state)
-        ;; clear state
-        (mantra-parser-clear-state parser)))))
+  (let ((name (mantra-parser-name parser))
+        (state (mantra-parser-state parser)))
+    (pubsub-publish name state)
+    ;; clear state
+    (mantra-parser-clear-state parser)))
 
 (defun mantra-parse-finish (parser key-seq)
   "Accept or abort parsing by PARSER.

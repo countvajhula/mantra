@@ -187,6 +187,10 @@
   (with-fixture fixture-parser-basic
     (should (vectorp (mantra-parser-state parser))))
 
+  ;; state is initialized by applying map to the empty vector
+  (with-fixture fixture-parser-nondefault
+    (should (equal "" (mantra-parser-state parser))))
+
   ;; mantra-parser-map
   (with-fixture fixture-parser-basic
     ;; defaults to identity function
@@ -209,7 +213,16 @@
     (should-not (seq-empty-p (mantra-parser-state parser))))
   (with-fixture fixture-parser-with-state
     (mantra-parser-clear-state parser)
-    (should (seq-empty-p (mantra-parser-state parser)))))
+    (should (seq-empty-p (mantra-parser-state parser))))
+  (with-fixture fixture-parser-nondefault
+    ;; clear resets to null state
+    (mantra-parser-clear-state parser)
+    (should (equal "" (mantra-parser-state parser))))
+  ;; null state is determined using map on the empty vector
+  (with-fixture fixture-parser-basic
+    (should (equal [] (mantra-parser-null-state parser))))
+  (with-fixture fixture-parser-nondefault
+    (should (equal "" (mantra-parser-null-state parser)))))
 
 (ert-deftest mantra-key-listening-test ()
   (with-fixture fixture-parser-accept-all
@@ -229,6 +242,10 @@
   (with-fixture fixture-parser-accept-all
     (should-not (mantra-parsing-in-progress-p parser)))
   (with-fixture fixture-parser-with-state
+    (should (mantra-parsing-in-progress-p parser)))
+  (with-fixture fixture-parser-nondefault
+    (should-not (mantra-parsing-in-progress-p parser)))
+  (with-fixture fixture-nondefault-parser-with-state
     (should (mantra-parsing-in-progress-p parser))))
 
 (ert-deftest mantra-parse-test ()
@@ -270,9 +287,7 @@
   (with-fixture fixture-parser-with-state
     ;; clears state
     (mantra-accept parser)
-    (should-not (mantra-parsing-in-progress-p parser)))
-  (with-fixture fixture-parser-accept-all
-    (should-error (mantra-accept parser))))
+    (should-not (mantra-parsing-in-progress-p parser))))
 
 (ert-deftest mantra-parse-finish-test ()
   ;; does not accept if parsing is not in progress
