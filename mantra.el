@@ -48,7 +48,7 @@
   "The index of the condition to start parsing.")
 
 (defconst mantra--index-stop 2
-  "The index of the condition to successfully end parsing.")
+  "The index of the condition to successfully stop parsing.")
 
 (defconst mantra--index-abort 3
   "The index of the condition to abort parsing.")
@@ -68,7 +68,7 @@
   (seq-elt parser mantra--index-start))
 
 (defun mantra-parser-stop (parser)
-  "Condition to end parsing for PARSER."
+  "Condition to stop parsing for PARSER."
   (seq-elt parser mantra--index-stop))
 
 (defun mantra-parser-abort (parser)
@@ -97,8 +97,8 @@
   "Clear the PARSER's state."
   (mantra-parser-set-state parser (vector)))
 
-(defun mantra-make-parser (name start end &optional abort accept)
-  "Make a PARSER named NAME with START, END, and ABORT conditions.
+(defun mantra-make-parser (name start stop &optional abort accept)
+  "Make a PARSER named NAME with START, STOP, and ABORT conditions.
 
 A parser is a set of criteria for storing key sequences in it in the
 form of a START condition to determine the start of a key sequence of
@@ -123,7 +123,7 @@ one is used that simply publishes the parsed key sequence."
         (accept (or accept #'identity)))
     (vector name
             start
-            end
+            stop
             abort
             accept
             (vector))))
