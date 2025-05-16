@@ -56,6 +56,9 @@
 (defconst mantra--index-state 4
   "The index of the state variable in a parser.")
 
+(defconst mantra--index-accept 5
+  "The index of the accept function in a parser.")
+
 (defun mantra-parser-name (parser)
   "The name of the PARSER."
   (seq-elt parser mantra--index-name))
@@ -71,6 +74,10 @@
 (defun mantra-parser-abort (parser)
   "Condition to abort parsing for PARSER."
   (seq-elt parser mantra--index-abort))
+
+(defun mantra-parser-accept (parser)
+  "Function to compute the result of parsing for PARSER."
+  (seq-elt parser mantra--index-accept))
 
 (defun mantra-parser-state (parser)
   "Get accumulated state in PARSER."
@@ -90,7 +97,7 @@
   "Clear the PARSER's state."
   (mantra-parser-set-state parser (vector)))
 
-(defun mantra-make-parser (name start end &optional abort)
+(defun mantra-make-parser (name start end &optional abort accept)
   "Make a PARSER named NAME with START, END, and ABORT conditions.
 
 A parser is a set of criteria for storing key sequences in it in the
@@ -106,19 +113,25 @@ happen during invocation of the same command, or it might not), a
 match event is generated containing the entire sequence in STATE as a
 single key sequence vector.  If ABORT is satisfied during parsing, the
 state is cleared. If no ABORT condition is specified, a default one is
-used that never aborts."
-  (let ((abort (or abort (lambda (_key-seq) nil))))
+used that never aborts.
+
+If an ACCEPT function is provided, it is invoked with the final state
+when accepting a key sequence. The result of invocation is published
+as the result of parsing. If no ACCEPT function is provided, a default
+one is used that simply publishes the parsed key sequence."
+  (let ((abort (or abort (lambda (_key-seq) nil)))
+        (accept (or accept #'identity)))
     (vector name
             start
             end
             abort
-            (vector))))
+            (vector)
+            accept)))
 
 (defvar mantra-basic-parser
   (mantra-make-parser "basic"
                       (lambda (_key-seq) t)
-                      (lambda (_key-seq) t)
-                      (lambda (_key-seq) nil))
+                      (lambda (_key-seq) t))
   "A parser to recognize all key sequences.")
 
 (defun mantra-pre-command-listener ()
@@ -180,15 +193,15 @@ name.  Note that as the pub/sub system is not persistent, it does not
 store any parsed key sequences after notifying subscribers of them.
 
 After publishing the match, this clears the parser state."
-  (let ((name (mantra-parser-name parser))
-        (state (mantra-parser-state parser)))
-    (when (seq-empty-p state)
-      (error "Can't accept empty key sequence!"))
-    ;; TODO: does the published notice need to have
-    ;; any metadata?
-    (pubsub-publish name state)
-    ;; clear state
-    (mantra-parser-clear-state parser)))
+  (let ((state (mantra-parser-state parser)))
+    (if (seq-empty-p state)
+        (error "Can't accept empty key sequence!")
+      (let ((name (mantra-parser-name parser))
+            (result (funcall (mantra-parser-accept parser)
+                             state)))
+        (pubsub-publish name result)
+        ;; clear state
+        (mantra-parser-clear-state parser)))))
 
 (defun mantra-parse-finish (parser key-seq)
   "Accept or abort parsing by PARSER.

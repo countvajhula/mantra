@@ -87,6 +87,21 @@
       ;; perhaps aid garbage collection
       (setq parser nil))))
 
+(defvar fixture-accepted-result "abcdefg"
+  "A dummy accepted result.")
+
+(defun fixture-parser-nondefault-accept (body)
+  (let ((parser nil))
+    (unwind-protect
+        (progn (setq parser (mantra-make-parser fixture-parser-accept-all-name
+                                                (lambda (_key-seq) t)
+                                                (lambda (_key-seq) t)
+                                                (lambda (_key-seq) nil)
+                                                (lambda (_state) fixture-accepted-result)))
+               (funcall body))
+      ;; perhaps aid garbage collection
+      (setq parser nil))))
+
 (defvar fixture-single-key [108]
   "A sequence representing a single key press (the letter l).")
 
@@ -105,6 +120,11 @@
   (with-fixture fixture-parser-abort-all
     (mantra-parser-set-state parser fixture-single-key)
     (funcall body-2)))
+
+(defun fixture-parser-with-state-and-nondefault-accept (body-3)
+  (with-fixture fixture-parser-nondefault-accept
+    (mantra-parser-set-state parser fixture-single-key)
+    (funcall body-3)))
 
 (defmacro with-key-listening (&rest test)
   (declare (indent 0))
@@ -150,7 +170,14 @@
 
   ;; mantra-parser-state
   (with-fixture fixture-parser-accept-all
-    (should (vectorp (mantra-parser-state parser)))))
+    (should (vectorp (mantra-parser-state parser))))
+
+  ;; mantra-parser-accept
+  (with-fixture fixture-parser-accept-all
+    ;; defaults to identity function
+    (should (equal "abc"
+                   (funcall (mantra-parser-accept parser)
+                            "abc")))))
 
 (ert-deftest mantra-state-test ()
   (with-fixture fixture-parser-accept-all
@@ -209,11 +236,16 @@
 
 (ert-deftest mantra-accept-test ()
   (with-fixture fixture-parser-with-state
-    ;; publishes key sequence
+    ;; publishes key sequence by default
     (with-fixture fixture-subscriber
      (mantra-accept parser)
      (should (equal fixture-single-key
                     result))))
+  (with-fixture fixture-parser-with-state-and-nondefault-accept
+    (with-fixture fixture-subscriber
+      (mantra-accept parser)
+      (should (equal fixture-accepted-result
+                     result))))
   (with-fixture fixture-parser-with-state
     ;; clears state
     (mantra-accept parser)
