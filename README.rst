@@ -20,11 +20,11 @@ Mantra allows you to define "regex"-like patterns on your keyboard activity in t
 
 The pattern conditions could be anything, not only based on the key sequence typed. Likewise, the parsers are defined in terms of mapping and composing parsed key sequences within the context of the full surrounding Emacs environment at each step, so that the parsed result could also be just about anything in the context of your activity.
 
-Whenever one of the defined patterns is encountered, the corresponding parser records the structured data (by default, simply the matching sequence of keystrokes) and publishes it using a basic pub/sub system for additional handling by any subscribers you define.
+Whenever one of the defined patterns is encountered, the corresponding parser records the structured data (by default, simply the matching sequence of keystrokes) and publishes it using a basic pub/sub system for additional handling by any subscribers you define. Higher levels of parsing (e.g., "record either buffer or window configuration changes, and only when I'm in such-and-such project path") may be achieved by subscribing to these primitive parsers and publishing fresh events if the desired conditions over these primitive parsers are met.
 
 Mantra is purely syntax, without semantics. It does not bind key sequences to commands or even know what commands parsed sequences may be bound to. The patterns and parsers are defined by you and may be associated with any actions that you see fit to perform, independently of any configured keybindings for these key sequences.
 
-Although you may find this package useful as an end user, for instance, for implicitly storing and reciting certain mantras in certain contexts, or analyzing keyboard activity for frequent patterns to give you an idea of where to focus your energies toward improving editing efficiency, the package is more likely to be useful to package developers to power higher-level features tied to your activity within Emacs, and could, for example, conceivably be used to implement packages resembling yasnippet, evil-repeat, Emacs's keyboard macro ring, Evil macros, and much more.
+This package could conceivably be used to implement packages resembling yasnippet, evil-repeat, Emacs's keyboard macro ring, Evil jumps and changes, winner mode, and much more.
 
 Installation
 ------------
@@ -40,11 +40,6 @@ Mantra is not on a package archive such as `MELPA <https://melpa.org/>`_ yet, bu
       :host github
       :repo "countvajhula/mantra"))
 
-How It Works
-------------
-
-Upon each key sequence being entered by you on the `Emacs command loop <https://www.gnu.org/software/emacs/manual/html_node/elisp/Command-Overview.html>`_, a listener (on the pre-command and post-command hooks) does basic "lexing" on this input to ensure that it isn't an empty or otherwise invalid sequence. Then, it notifies every configured parser of the key sequence. Each parser checks its own condition to start recording the sequence. If the condition is met, or if recording is already in progress, then the key sequence (or any parsed representation within the context of this sequence and the Emacs environment) is accumulated in a local state variable until either a stop condition is met (in which case the full composite state is published as the result of parsing), or an abort condition is met (in which case the state is simply cleared so that parsing may begin afresh).
-
 Further Reading
 ---------------
 
@@ -52,6 +47,7 @@ This package is informed by the perspective developed in `A Vimlike Fluency <htt
 
 - `Living the High Life <https://countvajhula.com/2021/02/02/vim-tip-of-the-day-living-the-high-life/>`_
 - `Saying More (Macros) <https://countvajhula.com/2021/02/08/vim-tip-of-the-day-saying-more-macros/>`_
+- `Going Places <https://countvajhula.com/2021/01/30/vim-tip-of-the-day-going-places/>`_
 
 Non-Ownership
 -------------
