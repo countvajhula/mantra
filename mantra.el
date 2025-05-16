@@ -118,14 +118,16 @@ interest, a STOP condition to determine the end, and an ABORT
 condition to abort parsing.
 
 The START condition is checked in `pre-command-hook' and STOP and
-ABORT conditions are checked in `post-command-hook'.  Once START is
-satisfied, the key sequences are accumulated in the parser state as a
-composed key sequence (vector).  When STOP is satisfied (which might
-happen during invocation of the same command, or it might not), a
-match event is generated containing the entire sequence in STATE as a
-single key sequence vector.  If ABORT is satisfied during parsing, the
-state is cleared. If no ABORT condition is specified, a default one is
-used that never aborts.
+ABORT conditions are checked in `post-command-hook'. Once START is
+satisfied, the key sequences (themselves, by default) are accumulated
+in the parser state as a composed key sequence (vector). When STOP is
+satisfied (which might happen during invocation of the same command,
+or it might not), a match event is published containing the entire
+sequence in STATE as a single key sequence vector (once again, by
+default. The specific nature of the parsed data can be defined using
+the MAP and COMPOSE predicates, as explained below). If ABORT is
+satisfied during parsing, the state is cleared. If no ABORT condition
+is specified, a default one is used that never aborts.
 
 MAP and COMPOSE define how the result of parsing is constructed and
 composed. MAP is a function of one argument that is invoked with the
@@ -139,7 +141,8 @@ If no MAP function is provided, the identity function is used as the
 default, so that the parsed value at each step is simply the input key
 sequence. If no COMPOSE function is provided, it defaults to `vconcat'
 which is appropriate for composing key sequence vectors (i.e., the
-default values if no MAP is specified).
+default values if no MAP is specified), so that the resulting parse is
+a single key sequence vector capturing the entire parsed stream.
 
 The state at the time of acceptance is published as the result of
 parsing."
