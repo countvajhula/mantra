@@ -53,11 +53,11 @@
 (defconst mantra--index-abort 3
   "The index of the condition to abort parsing.")
 
-(defconst mantra--index-state 4
-  "The index of the state variable in a parser.")
-
-(defconst mantra--index-accept 5
+(defconst mantra--index-accept 4
   "The index of the accept function in a parser.")
+
+(defconst mantra--index-state 5
+  "The index of the state variable in a parser.")
 
 (defun mantra-parser-name (parser)
   "The name of the PARSER."
@@ -125,8 +125,8 @@ one is used that simply publishes the parsed key sequence."
             start
             end
             abort
-            (vector)
-            accept)))
+            accept
+            (vector))))
 
 (defvar mantra-basic-parser
   (mantra-make-parser "basic"
