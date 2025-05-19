@@ -172,7 +172,7 @@ parsing."
             (funcall map (vector)))))
 
 (defvar mantra-basic-parser
-  (mantra-make-parser "basic"
+  (mantra-make-parser "mantra-all-key-sequences"
                       (lambda (_key-seq) t)
                       (lambda (_key-seq) t))
   "A parser to recognize all key sequences.")
