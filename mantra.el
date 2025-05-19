@@ -123,12 +123,18 @@ the empty vector."
                            abort
                            map
                            compose)
-  "Make a PARSER named NAME with START, STOP, and ABORT conditions.
+  "Make a parser for keyboard activity.
 
-A parser is a set of criteria for storing key sequences in it in the
+A parser is a set of criteria for recognizing key sequences, in the
 form of a START condition to determine the start of a key sequence of
 interest, a STOP condition to determine the end, and an ABORT
-condition to abort parsing.
+condition to abort parsing. Matches are published on a pub/sub system
+(using the `pubsub' package), under the topic NAME.
+
+NAME is the name of the parser and could be any string, but as it will
+be used as the topic for publishing output in a global pub/sub system,
+it should follow Emacs's naming conventions for global identifiers.
+Specifically, the name should be prefixed with the package name.
 
 The START condition is checked in `pre-command-hook' and STOP and
 ABORT conditions are checked in `post-command-hook'.  Once START is
