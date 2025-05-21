@@ -259,10 +259,10 @@ the entire parsed state in PARSER, not just the current key sequence."
   ;; as this is being called in post-command
   ;; TODO: should also pass state to stop and abort predicates?
   (when (mantra-parsing-in-progress-p parser)
-    (cond ((funcall (mantra-parser-abort parser) key-seq)
-           (mantra-parser-clear-state parser))
-          ((funcall (mantra-parser-stop parser) key-seq)
-           (mantra-accept parser)))))
+    (cond ((funcall (mantra-parser-stop parser) key-seq)
+           (mantra-accept parser))
+          ((funcall (mantra-parser-abort parser) key-seq)
+           (mantra-parser-clear-state parser)))))
 
 
 (provide 'mantra)
