@@ -56,6 +56,8 @@
 
 (defconst fixture-parser-abort-all-name "abort")
 
+(defconst fixture-parser-accept-all-abort-all-name "accept-abort")
+
 (defconst fixture-parser-nondefault-name "nondefault")
 
 (defun fixture-parser-basic (body)
@@ -94,6 +96,20 @@
   (let ((parser nil))
     (unwind-protect
         (progn (setq parser (mantra-make-parser fixture-parser-abort-all-name
+                                                (lambda (_key-seq) t)
+                                                ;; parser checks accept before abort
+                                                ;; so this must be nil for anything
+                                                ;; to be aborted
+                                                (lambda (_key-seq) nil)
+                                                (lambda (_key-seq) t)))
+               (funcall body))
+      ;; perhaps aid garbage collection
+      (setq parser nil))))
+
+(defun fixture-parser-accept-all-abort-all (body)
+  (let ((parser nil))
+    (unwind-protect
+        (progn (setq parser (mantra-make-parser fixture-parser-accept-all-abort-all-name
                                                 (lambda (_key-seq) t)
                                                 (lambda (_key-seq) t)
                                                 (lambda (_key-seq) t)))
@@ -138,6 +154,11 @@
   (with-fixture fixture-parser-nondefault
     (mantra-parser-set-state parser fixture-single-key)
     (funcall body-3)))
+
+(defun fixture-abort-accept-parser-with-state (body-4)
+  (with-fixture fixture-parser-accept-all-abort-all
+    (mantra-parser-set-state parser fixture-single-key)
+    (funcall body-4)))
 
 (defmacro with-key-listening (&rest test)
   (declare (indent 0))
@@ -308,4 +329,11 @@
     (with-fixture fixture-subscriber
       (mantra-parse-finish parser fixture-single-key)
       (should-not result)
+      (should-not (mantra-parsing-in-progress-p parser))))
+  ;; accepts if both abort and accept condition are met
+  (with-fixture fixture-abort-accept-parser-with-state
+    (with-fixture fixture-subscriber
+      (mantra-parse-finish parser fixture-single-key)
+      (should (equal fixture-single-key
+                     result))
       (should-not (mantra-parsing-in-progress-p parser)))))
