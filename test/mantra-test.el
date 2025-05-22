@@ -251,6 +251,10 @@
      (should (member parser mantra-parsers))))
   (with-fixture fixture-parser-accept-all
     (with-key-listening
+     (mantra-unregister parser)
+     (should-not (member parser mantra-parsers))))
+  (with-fixture fixture-parser-accept-all
+    (with-key-listening
      (mantra-listen-start fixture-single-key)
      (should (mantra-parsing-in-progress-p parser))))
   (with-fixture fixture-parser-accept-all

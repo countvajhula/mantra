@@ -210,6 +210,10 @@ than forwarding empty sequences."
   "Register PARSER to receive key sequence events."
   (push parser mantra-parsers))
 
+(defun mantra-unregister (parser)
+  "Unregister PARSER so it doesn't receive further key sequence events."
+  (setq mantra-parsers (remove parser mantra-parsers)))
+
 (defun mantra-initialize ()
   "Register an initial basic parser that accepts any key sequence."
   (add-hook 'pre-command-hook #'mantra-pre-command-listener)
