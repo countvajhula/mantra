@@ -223,10 +223,22 @@ than forwarding empty sequences."
   "Unregister PARSER so it doesn't receive further key sequence events."
   (setq mantra-parsers (remove parser mantra-parsers)))
 
+(defun mantra-connect ()
+  "Connect registered mantra parsers to the Emacs command loop.
+
+The parsers will be notified of all keyboard activity, at the
+granularity of when key sequences match a command."
+  (add-hook 'pre-command-hook #'mantra-pre-command-listener)
+  (add-hook 'post-command-hook #'mantra-post-command-listener))
+
+(defun mantra-disconnect ()
+  "Disconnect registered mantra parsers from the Emacs command loop."
+  (remove-hook 'pre-command-hook #'mantra-pre-command-listener)
+  (remove-hook 'post-command-hook #'mantra-post-command-listener))
+
 (defun mantra-initialize ()
   "Register an initial basic parser that accepts any key sequence."
-  (add-hook 'pre-command-hook #'mantra-pre-command-listener)
-  (add-hook 'post-command-hook #'mantra-post-command-listener)
+  (mantra-connect)
   ;; clear the list of registered parsers, for good measure
   (setq mantra-parsers nil))
 
