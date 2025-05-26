@@ -217,8 +217,7 @@ than forwarding empty sequences."
 (defun mantra-initialize ()
   "Register an initial basic parser that accepts any key sequence."
   (add-hook 'pre-command-hook #'mantra-pre-command-listener)
-  (add-hook 'post-command-hook #'mantra-post-command-listener)
-  (mantra-register mantra-basic-parser))
+  (add-hook 'post-command-hook #'mantra-post-command-listener))
 
 (defun mantra-parsing-in-progress-p (parser)
   "Whether PARSER is already parsing, i.e., accumulating state."
