@@ -60,6 +60,8 @@
 
 (defconst fixture-parser-nondefault-name "nondefault")
 
+(defconst fixture-subscriber-name "hks")
+
 (defun fixture-parser-basic (body)
   (let ((parser nil))
     (unwind-protect
@@ -172,6 +174,7 @@
          (subscriber (lambda (parsed-keys)
                        (setq result parsed-keys))))
     (pubsub-subscribe (mantra-parser-name parser)
+                      fixture-subscriber-name
                       subscriber)
     (funcall body-2)))
 
