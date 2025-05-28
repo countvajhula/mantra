@@ -16,14 +16,6 @@ mantra
 ===========
 Parse and compose keyboard activity in Emacs.
 
-Mantra allows you to define "regex"-like patterns on your keyboard activity in terms of start, stop, and abort conditions, together with parsers that transform this keyboard activity (within the context of the surrounding Emacs environment) into arbitrary structured data.
-
-The pattern conditions could be anything, not only based on the key sequence typed. Likewise, the parsers are defined in terms of mapping and composing parsed key sequences within the context of the full surrounding Emacs environment at each step, so that the parsed result could also be just about anything in the context of your activity.
-
-Whenever one of the defined patterns is encountered, the corresponding parser records the structured data (by default, simply the matching sequence of keystrokes) and publishes it using a basic pub/sub system for additional handling by any subscribers you define. Higher levels of parsing (e.g., "record either buffer or window configuration changes, and only when I'm in such-and-such project path") may be achieved by subscribing to these primitive parsers and publishing fresh events if the desired conditions over these primitive parsers are met.
-
-Mantra is purely syntax, without semantics. It does not bind key sequences to commands or even know what commands parsed sequences may be bound to. The patterns and parsers are defined by you and may be associated with any actions that you see fit to perform, independently of any configured keybindings for these key sequences.
-
 This package could conceivably be used to implement packages resembling yasnippet, evil-repeat, Emacs's keyboard macro ring, Evil jumps and changes, winner mode, and much more.
 
 Installation
@@ -39,6 +31,96 @@ Mantra is not on a package archive such as `MELPA <https://melpa.org/>`_ yet, bu
       :type git
       :host github
       :repo "countvajhula/mantra"))
+
+Use
+---
+
+Creating a Parser
+~~~~~~~~~~~~~~~~~
+
+To get started with Mantra, first create a parser. For convenience, Mantra includes a basic parser that parses all individual key sequences. It's defined this way:
+
+.. code-block:: elisp
+
+  (defvar mantra-basic-parser
+    (mantra-make-parser "mantra-all-key-sequences"
+                        (lambda (_key-seq) t)
+                        (lambda (_key-seq) t))
+    "A parser to recognize all key sequences.")
+
+The first argument, ``"mantra-all-key-sequences"``, is the name of the parser. Whenever the parser recognizes any input, it will publish its parsed output to the pub/sub system using its name as the topic for publication.
+
+The first lambda is the predicate for starting parsing. In this case, it always returns true, so this parser starts parsing at the start of each command. The next lambda is the predicate to decide when to stop parsing and accept a result. Since this, too, always returns true, it will always end parsing after each key sequence that matches a command has been entered.
+
+In other words, this parser will simply record every key sequence that matches a command.
+
+But the parser can't do anything until it is given input!
+
+Feeding Input to the Parser
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+We could manually feed the parser input using ``mantra-parse`` and then have it evaluate the accumulated input using ``mantra-parse-finish``, but a typical use we'd have for such a parser is for it to parse our own keyboard activity in Emacs *implicitly*. To do this, two things are needed:
+
+1. Mantra must be connected to the `Emacs command loop <https://www.gnu.org/software/emacs/manual/html_node/elisp/Command-Overview.html>`_ so that it is notified of all input key sequences. To do this:
+
+.. code-block:: elisp
+
+  (mantra-connect)
+
+2. Our parser (in this case, ``mantra-basic-parser``) must be registered with Mantra so that it forwards received input to it.
+
+.. code-block:: elisp
+
+  (mantra-register mantra-basic-parser)
+
+Now, Mantra is listening on the Emacs command loop, and it is forwarding all key sequences as input to our parser. 😎
+
+Subscribing to the Parser
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Okay, but the main thing you are probably interested in is to actually *do something* with the parsed key sequences. In order to do this, we just need to subscribe to the parser using its name. For instance, the following defines a subscriber to the basic parser that simply prints the parsed sequences in human-readable form (using Emacs's built-in ``key-description`` which converts the internal key vector representation into human-readable keys):
+
+.. code-block:: elisp
+
+  (pubsub-subscribe (mantra-parser-name mantra-basic-parser)
+                    "my-subscriber"
+                    (lambda (parsed-keys)
+                      (print (key-description parsed-keys))))
+
+Switch to the ``*Messages*`` buffer to see the printed output.
+
+To unsubscribe your printer from the parser:
+
+.. code-block:: elisp
+
+  (pubsub-unsubscribe (mantra-parser-name mantra-basic-parser)
+                      "my-subscriber")
+
+Troubleshooting
+---------------
+
+If you ever write a parser that has an error in it, Emacs will disable the corresponding listener (in this case, Mantra) on the command loop so that Emacs remains functional. At this point, Mantra parsers will no longer be notified of any activity on the command loop. You might see a sign this has happened in the Messages buffer:
+
+.. code-block:: elisp
+
+  Error in post-command-hook (mantra-post-command-listener): (invalid-function [13])
+
+After fixing the problem, you can reinstate mantra listening on the command loop by calling:
+
+.. code-block:: elisp
+
+  (mantra-connect)
+
+How It Works
+------------
+
+Mantra allows you to define "regex"-like patterns on your keyboard activity in terms of start, stop, and abort conditions, together with parsers that transform this keyboard activity (within the context of the surrounding Emacs environment) into arbitrary structured data.
+
+The pattern conditions could be anything, not only based on the key sequence typed. Likewise, the parsers are defined in terms of mapping and composing parsed key sequences within the context of the full surrounding Emacs environment at each step, so that the parsed result could also be just about anything in the context of your activity.
+
+Whenever one of the defined patterns is encountered, the corresponding parser records the structured data (by default, simply the matching sequence of keystrokes) and publishes it using a basic pub/sub system for additional handling by any subscribers you define. Higher levels of parsing (e.g., "record either buffer or window configuration changes, and only when I'm in such-and-such project path") may be achieved by subscribing to these primitive parsers and publishing fresh events if the desired conditions over these primitive parsers are met.
+
+Mantra is purely syntax, without semantics. It does not bind key sequences to commands or even know what commands parsed sequences may be bound to. The patterns and parsers are defined by you and may be associated with any actions that you see fit to perform, independently of any configured keybindings for these key sequences.
 
 Further Reading
 ---------------
