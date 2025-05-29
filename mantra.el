@@ -40,11 +40,6 @@
 ;; TODO: potentially make each parser extensible,
 ;; allowing users to add or remove start, stop,
 ;; and abort conditions
-;; TODO: add a "registration board" mapping parser names
-;; to callbacks, and subscribe them by name instead of subscribing
-;; callbacks directly.
-;; That way, parsers can be added and removed by name
-;; (as lambdas, they can't be reliably identified for removal)
 (defvar mantra-parsers
   nil
   "Current set of parsers actively parsing keyboard input.")
