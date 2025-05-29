@@ -182,13 +182,17 @@
 ;; Tests
 ;;
 
-(ert-deftest mantra-parser-test ()
+(ert-deftest parser-test ()
   ;; null constructor
   (with-fixture fixture-parser-basic
     (should (vectorp parser)))
 
   (with-fixture fixture-parser-basic
     (should (vectorp parser)))
+
+  ;; uses default abort predicate if none provided
+  (with-fixture fixture-parser-basic
+    (should-not (funcall (mantra-parser-abort parser) "abc" [97 98 99])))
 
   ;; mantra-parser-name
   (with-fixture fixture-parser-basic
@@ -230,7 +234,13 @@
                             []
                             [1 2 3])))))
 
-(ert-deftest mantra-state-test ()
+(ert-deftest mantra-basic-parser-test ()
+  (let ((parser mantra-basic-parser))
+    (should (funcall (mantra-parser-start parser) "a"))
+    (should (funcall (mantra-parser-stop parser) "abc" [97 98 99]))
+    (should-not (funcall (mantra-parser-abort parser) "abc" [97 98 99]))))
+
+(ert-deftest state-test ()
   (with-fixture fixture-parser-accept-all
     (should (seq-empty-p (mantra-parser-state parser))))
   (with-fixture fixture-parser-with-state
@@ -248,7 +258,7 @@
   (with-fixture fixture-parser-nondefault
     (should (equal "" (mantra-parser-null-state parser)))))
 
-(ert-deftest mantra-key-listening-test ()
+(ert-deftest key-listening-test ()
   (with-fixture fixture-parser-accept-all
     (with-key-listening
      (should (member parser mantra-parsers))))

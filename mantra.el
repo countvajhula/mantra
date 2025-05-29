@@ -168,7 +168,7 @@ a single key sequence vector capturing the entire parsed stream.
 
 The state at the time of acceptance is published as the result of
 parsing."
-  (let ((abort (or abort (lambda (_key-seq) nil)))
+  (let ((abort (or abort (lambda (_key-seq _state) nil)))
         (map (or map #'identity))
         (compose (or compose #'vconcat)))
     (vector name
@@ -183,7 +183,7 @@ parsing."
 (defvar mantra-basic-parser
   (mantra-make-parser "mantra-all-key-sequences"
                       (lambda (_key-seq) t)
-                      (lambda (_key-seq) t))
+                      (lambda (_key-seq _state) t))
   "A parser to recognize all key sequences.")
 
 (defun mantra-pre-command-listener ()
