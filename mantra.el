@@ -37,9 +37,6 @@
 ;; we could define languages as sets of parsers,
 ;; and infer the appropriate language based on
 ;; conditions at start.
-;; TODO: potentially make each parser extensible,
-;; allowing users to add or remove start, stop,
-;; and abort conditions
 (defvar mantra-parsers
   nil
   "Current set of parsers actively parsing keyboard input.")
@@ -180,10 +177,18 @@ parsing."
             ;; initialize to null state
             (funcall map (vector)))))
 
+(defun mantra-basic-parser-start (_key-seq)
+  "Start parsing on any key sequence."
+  t)
+
+(defun mantra-basic-parser-stop (_key-seq _state)
+  "Stop parsing (i.e., accept) after any key sequence."
+  t)
+
 (defvar mantra-basic-parser
   (mantra-make-parser "mantra-all-key-sequences"
-                      (lambda (_key-seq) t)
-                      (lambda (_key-seq _state) t))
+                      #'mantra-basic-parser-start
+                      #'mantra-basic-parser-stop)
   "A parser to recognize all key sequences.")
 
 (defun mantra-pre-command-listener ()
