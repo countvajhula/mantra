@@ -42,13 +42,23 @@ To get started with Mantra, first create a parser. For convenience, Mantra inclu
 
 .. code-block:: elisp
 
+  (defun mantra-basic-parser-start (_key-seq)
+    "Start parsing on any key sequence."
+    t)
+
+  (defun mantra-basic-parser-stop (_key-seq _state)
+    "Stop parsing (i.e., accept) after any key sequence."
+    t)
+
   (defvar mantra-basic-parser
     (mantra-make-parser "mantra-all-key-sequences"
-                        (lambda (_key-seq) t)
-                        (lambda (_key-seq) t))
+                        #'mantra-basic-parser-start
+                        #'mantra-basic-parser-stop)
     "A parser to recognize all key sequences.")
 
 The first argument, ``"mantra-all-key-sequences"``, is the name of the parser. Whenever the parser recognizes any input, it will publish its parsed output to the pub/sub system using its name as the topic for publication.
+
+The following two function arguments are the stop and abort conditions for the parser. We use named functions instead of lambdas (which would also work) for reasons that will be explained soon.
 
 The first lambda is the predicate for starting parsing. In this case, it always returns true, so this parser starts parsing at the start of each command. The next lambda is the predicate to decide when to stop parsing and accept a result. Since this, too, always returns true, it will always end parsing after each key sequence that matches a command has been entered.
 
@@ -73,12 +83,12 @@ We could manually feed the parser input using ``mantra-parse`` and then have it 
 
   (mantra-register mantra-basic-parser)
 
-Now, Mantra is listening on the Emacs command loop, and it is forwarding all key sequences as input to our parser. 😎
+Now, Mantra is listening on the Emacs command loop, and it is forwarding all key sequences to our parser. 😎
 
 Subscribing to the Parser
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Okay, but the main thing you are probably interested in is to actually *do something* with the parsed key sequences. In order to do this, we just need to subscribe to the parser using its name. For instance, the following defines a subscriber to the basic parser that simply prints the parsed sequences in human-readable form (using Emacs's built-in ``key-description`` which converts the internal key vector representation into human-readable keys):
+Okay, but the main thing you are probably interested in is to actually *do something* with the parsed key sequences. In order to do this, we just need to subscribe to the parser using its name. For instance, the following defines a subscriber (using the ``pubsub`` package used by Mantra to publish results) to the basic parser that simply prints the parsed sequences in human-readable form (using Emacs's built-in ``key-description`` which converts the internal key vector representation into human-readable keys):
 
 .. code-block:: elisp
 
@@ -96,10 +106,49 @@ To unsubscribe your printer from the parser:
   (pubsub-unsubscribe (mantra-parser-name mantra-basic-parser)
                       "my-subscriber")
 
+Debugging
+~~~~~~~~~
+
+If a parser isn't behaving as expected, it can be useful to attach debug logs to each stage of the parsing lifecycle.
+
+Since each parsing stage (i.e., *start*, *stop*, and *abort*) is fulfilled by a function, you can simply use Emacs's built-in way to augment function behavior --- *advice* --- to implement the desired debugging!
+
+As always, with advice in Emacs, it's necessary for the parsing functions to be *named functions* rather than anonymous lambdas, and this is why we avoid lambdas in the definition of ``mantra-basic-parser`` that we saw earlier. Let's look at how we might use advice to implement debug logs, continuing with our earlier example.
+
+Now, remember that you can use any advice functions you like, but Mantra provides some simple ones that are broadly useful to trace parsing, so we'll use those here.
+
+.. code-block:: elisp
+
+  (require 'mantra-debug)
+
+  (advice-add #'mantra-basic-parser-start
+              :around #'mantra-debug-parser-start)
+
+  (advice-add #'mantra-basic-parser-stop
+              :around #'mantra-debug-parser-stop)
+
+  (advice-add #'mantra-basic-parser-abort
+              :around #'mantra-debug-parser-abort)
+
+Now, open the ``*Messages*`` buffer in a window alongside any buffer where you are doing things, and you should see the debug trace logs appear there for each stage of parsing using the basic parser. When you're satisfied, remove the debugging advice:
+
+.. code-block:: elisp
+
+  (advice-remove #'mantra-basic-parser-start
+                 #'mantra-debug-parser-start)
+
+  (advice-remove #'mantra-basic-parser-stop
+                 #'mantra-debug-parser-stop)
+
+  (advice-remove #'mantra-basic-parser-abort
+                 #'mantra-debug-parser-abort)
+
+As advice is a general way to augment function behavior, you can use this approach to do anything you like in connection with the parsing stages of any particular parser. For instance, you could add additional conditions for each stage. But this is generally not advisable (so to speak), and it would likely be better to simply write a new parser with the desired functionality rather than override an existing one using advice. Still, knowing this could be useful, as it means parsers used with Mantra are inherently extensible using advice in the same way that Emacs functions are, and with the same caveats.
+
 Troubleshooting
 ---------------
 
-If you ever write a parser that has an error in it, Emacs will disable the corresponding listener (in this case, Mantra) on the command loop so that Emacs remains functional. At this point, Mantra parsers will no longer be notified of any activity on the command loop. You might see a sign this has happened in the Messages buffer:
+If you ever write a parser that has an unhandled error in it, Emacs will disable the corresponding listener (in this case, Mantra) on the command loop so that Emacs remains functional. At this point, Mantra parsers will no longer be notified of any activity on the command loop. You might see a sign this has happened in the Messages buffer:
 
 .. code-block:: elisp
 
