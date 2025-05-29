@@ -143,7 +143,7 @@ Now, open the ``*Messages*`` buffer in a window alongside any buffer where you a
   (advice-remove #'mantra-basic-parser-abort
                  #'mantra-debug-parser-abort)
 
-As advice is a general way to augment function behavior, you can use this approach to do anything you like in connection with the parsing stages of any particular parser. For instance, you could add additional conditions for each stage. But this is generally not advisable (so to speak), and it would likely be better to simply write a new parser with the desired functionality rather than override an existing one using advice. Still, knowing this could be useful, as it means parsers used with Mantra are inherently extensible using advice in the same way that Emacs functions are, and with the same caveats.
+As advice is a general way to augment function behavior, you can use this approach to do anything you like in connection with the parsing stages of any particular parser. For instance, you could add additional or alternative conditions for each stage. But this is generally not advisable (so to speak), and it would likely be better to simply write a new parser with the desired functionality rather than override an existing one using advice. Still, knowing this could be useful, as it means parsers used with Mantra are inherently extensible using advice in the same way that Emacs functions are, and with the same caveats.
 
 Troubleshooting
 ---------------
