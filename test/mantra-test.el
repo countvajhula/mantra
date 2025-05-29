@@ -347,10 +347,9 @@
       (mantra-parse-finish parser fixture-single-key)
       (should-not result)
       (should-not (mantra-parsing-in-progress-p parser))))
-  ;; accepts if both abort and accept condition are met
+  ;; aborts if both abort and accept condition are met
   (with-fixture fixture-abort-accept-parser-with-state
     (with-fixture fixture-subscriber
       (mantra-parse-finish parser fixture-single-key)
-      (should (equal fixture-single-key
-                     result))
+      (should-not result)
       (should-not (mantra-parsing-in-progress-p parser)))))
