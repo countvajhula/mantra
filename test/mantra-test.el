@@ -67,7 +67,7 @@
     (unwind-protect
         (progn (setq parser (mantra-make-parser fixture-parser-basic-name
                                                 (lambda (_key-seq) t)
-                                                (lambda (_key-seq) t)))
+                                                (lambda (_key-seq _state) t)))
                (funcall body))
       ;; perhaps aid garbage collection
       (setq parser nil))))
@@ -77,8 +77,8 @@
     (unwind-protect
         (progn (setq parser (mantra-make-parser fixture-parser-accept-all-name
                                                 (lambda (_key-seq) t)
-                                                (lambda (_key-seq) t)
-                                                (lambda (_key-seq) nil)))
+                                                (lambda (_key-seq _state) t)
+                                                (lambda (_key-seq _state) nil)))
                (funcall body))
       ;; perhaps aid garbage collection
       (setq parser nil))))
@@ -88,8 +88,8 @@
     (unwind-protect
         (progn (setq parser (mantra-make-parser fixture-parser-accept-none-name
                                                 (lambda (_key-seq) nil)
-                                                (lambda (_key-seq) nil)
-                                                (lambda (_key-seq) nil)))
+                                                (lambda (_key-seq _state) nil)
+                                                (lambda (_key-seq _state) nil)))
                (funcall body))
       ;; perhaps aid garbage collection
       (setq parser nil))))
@@ -102,8 +102,8 @@
                                                 ;; parser checks accept before abort
                                                 ;; so this must be nil for anything
                                                 ;; to be aborted
-                                                (lambda (_key-seq) nil)
-                                                (lambda (_key-seq) t)))
+                                                (lambda (_key-seq _state) nil)
+                                                (lambda (_key-seq _state) t)))
                (funcall body))
       ;; perhaps aid garbage collection
       (setq parser nil))))
@@ -113,8 +113,8 @@
     (unwind-protect
         (progn (setq parser (mantra-make-parser fixture-parser-accept-all-abort-all-name
                                                 (lambda (_key-seq) t)
-                                                (lambda (_key-seq) t)
-                                                (lambda (_key-seq) t)))
+                                                (lambda (_key-seq _state) t)
+                                                (lambda (_key-seq _state) t)))
                (funcall body))
       ;; perhaps aid garbage collection
       (setq parser nil))))
@@ -125,8 +125,8 @@
     (unwind-protect
         (progn (setq parser (mantra-make-parser fixture-parser-nondefault-name
                                                 (lambda (_key-seq) t)
-                                                (lambda (_key-seq) t)
-                                                (lambda (_key-seq) nil)
+                                                (lambda (_key-seq _state) t)
+                                                (lambda (_key-seq _state) nil)
                                                 #'key-description
                                                 #'concat))
                (funcall body))
@@ -201,11 +201,11 @@
 
   ;; mantra-parser-stop
   (with-fixture fixture-parser-accept-all
-    (should (funcall (mantra-parser-stop parser) "abc")))
+    (should (funcall (mantra-parser-stop parser) "abc" [97 98 99])))
 
   ;; mantra-parser-abort
   (with-fixture fixture-parser-accept-all
-    (should-not (funcall (mantra-parser-abort parser) "abc")))
+    (should-not (funcall (mantra-parser-abort parser) "abc" [97 98 99])))
 
   ;; mantra-parser-state
   (with-fixture fixture-parser-basic
