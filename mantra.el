@@ -253,14 +253,30 @@ granularity of when key sequences match a command."
 If PARSER is already parsing (i.e., it already has state), then append
 KEY-SEQ to PARSER's current state.  Otherwise, begin parsing by
 initializing PARSER's state to KEY-SEQ if the start condition is met.
-Otherwise, do nothing."
+Otherwise, do nothing.
+
+If parsing is in progress, either prior to or as a result of the
+present invocation, then also check the abort condition for the parser
+to see if parsing should be aborted. This is done at this stage before
+the actual command is executed (i.e., not in `mantra-parse-finish'
+like checking the accept predicate) to support avoiding an infinite
+loop in some self-referential cases like repeating the last command."
   (when (or (mantra-parsing-in-progress-p parser)
             (funcall (mantra-parser-start parser)
                      key-seq))
     (mantra-parser-set-state parser
                              (funcall (mantra-parser-compose parser)
                                       (mantra-parser-state parser)
-                                      (funcall (mantra-parser-map parser) key-seq)))))
+                                      (funcall (mantra-parser-map parser)
+                                               key-seq)))
+    ;; The accept predicate is checked in `mantra-parse-finish', at
+    ;; which point state already includes key-seq. For consistency, we
+    ;; check the abort predicate here *after* incorporating key-seq
+    ;; into state.
+    (when (funcall (mantra-parser-abort parser)
+                   key-seq
+                   (mantra-parser-state parser))
+      (mantra-parser-clear-state parser))))
 
 (defun mantra-accept (parser)
   "Accept the current state in PARSER.
@@ -277,23 +293,20 @@ After publishing the match, this clears the parser state."
     (mantra-parser-clear-state parser)))
 
 (defun mantra-parse-finish (parser key-seq)
-  "Accept or abort parsing by PARSER.
+  "Accept PARSER state or continue parsing.
 
 KEY-SEQ is the current key sequence.  Aborting or accepting is based on
-the entire parsed state in PARSER, not just the current key sequence."
+the entire parsed state in PARSER, not just the current key sequence.
+
+If neither accept nor abort conditions are met, do nothing, i.e.,
+continue parsing."
   ;; state already includes key-seq by this point,
   ;; as this is being called in post-command
-  ;; TODO: should also pass state to stop and abort predicates?
-  (when (mantra-parsing-in-progress-p parser)
-    (let ((state (mantra-parser-state parser)))
-      (cond ((funcall (mantra-parser-abort parser)
+  (when (and (mantra-parsing-in-progress-p parser)
+             (funcall (mantra-parser-stop parser)
                       key-seq
-                      state)
-             (mantra-parser-clear-state parser))
-            ((funcall (mantra-parser-stop parser)
-                      key-seq
-                      state)
-             (mantra-accept parser))))))
+                      (mantra-parser-state parser)))
+    (mantra-accept parser)))
 
 
 (provide 'mantra)

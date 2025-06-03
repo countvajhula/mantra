@@ -99,9 +99,6 @@
     (unwind-protect
         (progn (setq parser (mantra-make-parser fixture-parser-abort-all-name
                                                 (lambda (_key-seq) t)
-                                                ;; parser checks accept before abort
-                                                ;; so this must be nil for anything
-                                                ;; to be aborted
                                                 (lambda (_key-seq _state) nil)
                                                 (lambda (_key-seq _state) t)))
                (funcall body))
@@ -156,11 +153,6 @@
   (with-fixture fixture-parser-nondefault
     (mantra-parser-set-state parser fixture-single-key)
     (funcall body-3)))
-
-(defun fixture-abort-accept-parser-with-state (body-4)
-  (with-fixture fixture-parser-accept-all-abort-all
-    (mantra-parser-set-state parser fixture-single-key)
-    (funcall body-4)))
 
 (defmacro with-key-listening (&rest test)
   (declare (indent 0))
@@ -313,7 +305,11 @@
     (mantra-parse parser
                   [100 101 102])
     (should (equal "a b c d e f"
-                   (mantra-parser-state parser)))))
+                   (mantra-parser-state parser))))
+  (with-fixture fixture-abort-parser-with-state
+                (mantra-parse parser
+                              fixture-single-key)
+                (should-not (mantra-parsing-in-progress-p parser))))
 
 (ert-deftest mantra-accept-test ()
   (with-fixture fixture-parser-with-state
@@ -340,16 +336,4 @@
       (mantra-parse-finish parser fixture-single-key)
       (should (equal fixture-single-key
                      result))
-      (should-not (mantra-parsing-in-progress-p parser))))
-  ;; aborts if abort condition is met
-  (with-fixture fixture-abort-parser-with-state
-    (with-fixture fixture-subscriber
-      (mantra-parse-finish parser fixture-single-key)
-      (should-not result)
-      (should-not (mantra-parsing-in-progress-p parser))))
-  ;; aborts if both abort and accept condition are met
-  (with-fixture fixture-abort-accept-parser-with-state
-    (with-fixture fixture-subscriber
-      (mantra-parse-finish parser fixture-single-key)
-      (should-not result)
       (should-not (mantra-parsing-in-progress-p parser)))))
