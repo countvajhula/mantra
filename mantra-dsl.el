@@ -1,0 +1,219 @@
+;;; mantra-dsl.el --- Mantras, not macros! -*- lexical-binding: t -*-
+
+;; This file is NOT a part of Gnu Emacs.
+
+;; This work is "part of the world."  You are free to do whatever you
+;; like with it and it isn't owned by anybody, not even the
+;; creators.  Attribution would be appreciated and is a valuable
+;; contribution in itself, but it is not strictly necessary nor
+;; required.  If you'd like to learn more about this way of doing
+;; things and how it could lead to a peaceful, efficient, and creative
+;; world, and how you can help, visit https://drym.org.
+;;
+;; This paradigm transcends traditional legal and economic systems, but
+;; for the purposes of any such systems within which you may need to
+;; operate:
+;;
+;; This is free and unencumbered software released into the public domain.
+;; The authors relinquish any copyright claims on this work.
+
+;;; Commentary:
+
+;; A DSL for composing mantras
+
+;;; Code:
+
+(defun mantra-make-key (key)
+  "A primitive KEY sequence."
+  `(key ,key))
+
+(defun mantra--key-key (key)
+  "The underlying key sequence in KEY."
+  (cadr key))
+
+(defun mantra-key-p (obj)
+  "Check if OBJ specifies a key sequence."
+  (condition-case nil
+      (eq 'key
+          (nth 0 obj))
+    (error nil)))
+
+(defun mantra-make-seq (&rest mantras)
+  "Construct a sequence of mantras."
+  `(seq ,mantras))
+
+(defun mantra-seq-p (obj)
+  "Check if OBJ specifies a seq."
+  (condition-case nil
+      (eq 'seq
+          (nth 0 obj))
+    (error nil)))
+
+(defun mantra--seq-phases (seq)
+  "Get the phases of a SEQ.
+
+Each phase could be any mantra."
+  (nth 1 seq))
+
+(defun mantra--seq-first (seq)
+  "The first mantra in SEQ."
+  (car (mantra--seq-phases seq)))
+
+(defun mantra--seq-rest (seq)
+  "The rest of the mantras in SEQ, except the first."
+  (apply #'mantra-make-seq
+         (cdr (mantra--seq-phases seq))))
+
+(defun mantra--seq-null-p (seq)
+  "Check if SEQ is empty or null."
+  (null (mantra--seq-phases seq)))
+
+(defun mantra-p (obj)
+  "Check if OBJ specifies a mantra."
+  (or (mantra-key-p obj)
+      (mantra-seq-p obj)))
+
+(defconst mantra--null (mantra-make-key (vector))
+  "The null mantra.")
+
+(cl-defun mantra-make-computation (&key
+                                   (perceive #'identity)
+                                   (synthesize #'identity))
+  "A computation to be performed as part of mantra recitation.
+
+PERCEIVE - the function to be applied to the result of each traversal step,
+which transforms it to the perceived type.
+SYNTHESIZE - a binary function to be applied in combining results from nested
+computations (each of the \"perceived\" type) to yield the provisional result
+\(also of the perceived type)."
+  (list 'computation
+        perceive
+        synthesize))
+
+(defun mantra--computation-perceive (computation)
+  "The perception procedure of the COMPUTATION."
+  (nth 1 computation))
+
+(defun mantra--computation-synthesize (computation)
+  "The perception procedure of the COMPUTATION."
+  (nth 2 computation))
+
+(defun mantra-compose-computation (a b computation)
+  "Compose traversal results according to COMPUTATION.
+
+Combine the result of a traversal computation A with the accumulated
+computation B into an aggregate result."
+  ;; TODO: ruminate here
+  (when (and a b)
+    (funcall (mantra--computation-synthesize computation)
+             a
+             b)))
+
+(defconst mantra--computation-default
+  (mantra-make-computation :perceive #'list
+                           :synthesize #'append)
+  "The default computation done on traversals.
+
+Each move is wrapped in a list.  These are concatenated using list
+concatenation.")
+
+(defun mantra-eval-key (key &optional computation result)
+  "Evaluate KEY.
+
+A key is a primitive Emacs key sequence and the base case of mantra
+evaluation. It is evaluated using `execute-kbd-macro', and the overall
+computation is stitched together in terms of the executed key and the
+accumulated result.
+
+To do this, the executed key is first \"perceived\" (i.e., mapped),
+and then \"synthesized\" (i.e., combined) with the RESULT so far, as
+specified in the COMPUTATION associated with the mantra.
+
+When COMPUTATION is left unspecified, `mantra--computation-default' is
+used, guided by which, this function returns a list of keys recited.
+Note that, in particular, if RESULT happens to be empty and if a key
+is recited, then this doesn't return the recited key itself but
+rather, a singleton list containing the key."
+  (let* ((computation (or computation mantra--computation-default))
+         (result (or result
+                     (funcall (mantra--computation-perceive computation)
+                              mantra--null)))
+         (prim-key-seq (mantra--key-key key)))
+    (execute-kbd-macro prim-key-seq)
+    (mantra-compose-computation result
+                                (funcall (mantra--computation-perceive computation)
+                                         prim-key-seq)
+                                computation)))
+
+(defun mantra-eval-seq (seq computation result)
+  "Execute a SEQ.
+
+Attempts the seq in the order of its phases.  The seq
+succeeds only if all of the phases succeed, and otherwise fails.
+
+See `mantra-eval-move' for more on COMPUTATION and RESULT."
+  (if (mantra--seq-null-p seq)
+      result
+    (let ((current-phase (mantra--seq-first seq))
+          (remaining-seq (mantra--seq-rest seq)))
+      (let ((executed-phase (mantra-eval current-phase
+                                         computation
+                                         result)))
+        (when executed-phase
+          (mantra-eval-seq remaining-seq
+                           computation
+                           executed-phase))))))
+
+(defun mantra--eval (mantra computation result)
+  "Helper to execute TRAVERSAL.
+
+See `mantra-eval-move' for more on COMPUTATION and RESULT."
+  (cond ((mantra-seq-p mantra)
+         (mantra-eval-seq mantra
+                          computation
+                          result))
+        ((mantra-key-p mantra)
+         (mantra-eval-key mantra
+                          computation
+                          result))
+        ;; fall back to a lambda. It must still accept
+        ;; the same arguments as any mantra, so that
+        ;; it could in principle produce a valid result
+        ;; but in practice the fallback lambda may be
+        ;; used for predicates where we only care whether
+        ;; the output is truthy or not.
+        (t (funcall mantra
+                    computation
+                    result))))
+
+(defun mantra-eval (mantra
+                    &optional
+                    computation
+                    result)
+  "Execute a tree TRAVERSAL.
+
+TRAVERSAL could be a move, a maneuver, or any other mantra traversal.
+If it is not a mantra expression, then it is assumed to be an ELisp
+function, and the rule for interpretation is to apply the function.
+
+The evaluation is done in a \"tail-recursive\" way, by passing the
+in-progress RESULT forward through subsequent stages of traversal
+evaluation.
+
+This function, along with any of the more specific traversal
+evaluators such as `mantra-eval-maneuver', evaluates to a COMPUTATION
+on the traversal actually executed.
+
+See `mantra-eval-move' for more on COMPUTATION and RESULT."
+  (let* ((computation (if computation
+                          computation
+                        mantra--computation-default))
+         (result (or result
+                     (mantra-eval-key mantra--null
+                                      computation))))
+    (mantra--eval mantra
+                  computation
+                  result)))
+
+(provide 'mantra-dsl)
+;;; mantra-dsl.el ends here
