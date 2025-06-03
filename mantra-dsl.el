@@ -77,44 +77,43 @@ Each phase could be any mantra."
   "The null mantra.")
 
 (cl-defun mantra-make-computation (&key
-                                   (perceive #'identity)
-                                   (synthesize #'identity))
+                                   (map #'identity)
+                                   (compose #'identity))
   "A computation to be performed as part of mantra recitation.
 
-PERCEIVE - the function to be applied to the result of each traversal step,
-which transforms it to the perceived type.
-SYNTHESIZE - a binary function to be applied in combining results from nested
-computations (each of the \"perceived\" type) to yield the provisional result
-\(also of the perceived type)."
+MAP - the function to be applied to the result of each key sequence,
+which transforms it to the parsed type.
+COMPOSE - a binary function to be applied in combining results from nested
+computations (each of the parsed type) to yield the provisional result
+\(also of the parsed type)."
   (list 'computation
-        perceive
-        synthesize))
+        map
+        compose))
 
-(defun mantra--computation-perceive (computation)
-  "The perception procedure of the COMPUTATION."
+(defun mantra--computation-map (computation)
+  "The map procedure of the COMPUTATION."
   (nth 1 computation))
 
-(defun mantra--computation-synthesize (computation)
-  "The perception procedure of the COMPUTATION."
+(defun mantra--computation-compose (computation)
+  "The compose procedure of the COMPUTATION."
   (nth 2 computation))
 
 (defun mantra-compose-computation (a b computation)
-  "Compose traversal results according to COMPUTATION.
+  "Compose results of mantra evaluation according to COMPUTATION.
 
-Combine the result of a traversal computation A with the accumulated
+Combine the result of a mantra computation A with the accumulated
 computation B into an aggregate result."
-  ;; TODO: ruminate here
   (when (and a b)
-    (funcall (mantra--computation-synthesize computation)
+    (funcall (mantra--computation-compose computation)
              a
              b)))
 
 (defconst mantra--computation-default
-  (mantra-make-computation :perceive #'list
-                           :synthesize #'append)
-  "The default computation done on traversals.
+  (mantra-make-computation :map #'list
+                           :compose #'append)
+  "The default computation done on mantras.
 
-Each move is wrapped in a list.  These are concatenated using list
+Each result is wrapped in a list.  These are concatenated using list
 concatenation.")
 
 (defun mantra-eval-key (key &optional computation result)
@@ -125,9 +124,9 @@ evaluation. It is evaluated using `execute-kbd-macro', and the overall
 computation is stitched together in terms of the executed key and the
 accumulated result.
 
-To do this, the executed key is first \"perceived\" (i.e., mapped),
-and then \"synthesized\" (i.e., combined) with the RESULT so far, as
-specified in the COMPUTATION associated with the mantra.
+To do this, the executed key is first parsed via the `map' predicate,
+and then combined with the RESULT so far using the `compose'
+predicate, as specified in the COMPUTATION associated with the mantra.
 
 When COMPUTATION is left unspecified, `mantra--computation-default' is
 used, guided by which, this function returns a list of keys recited.
@@ -136,12 +135,12 @@ is recited, then this doesn't return the recited key itself but
 rather, a singleton list containing the key."
   (let* ((computation (or computation mantra--computation-default))
          (result (or result
-                     (funcall (mantra--computation-perceive computation)
+                     (funcall (mantra--computation-map computation)
                               mantra--null)))
          (prim-key-seq (mantra--key-key key)))
     (execute-kbd-macro prim-key-seq)
     (mantra-compose-computation result
-                                (funcall (mantra--computation-perceive computation)
+                                (funcall (mantra--computation-map computation)
                                          prim-key-seq)
                                 computation)))
 
@@ -165,7 +164,7 @@ See `mantra-eval-move' for more on COMPUTATION and RESULT."
                            executed-phase))))))
 
 (defun mantra--eval (mantra computation result)
-  "Helper to execute TRAVERSAL.
+  "Helper to evaluate MANTRA.
 
 See `mantra-eval-move' for more on COMPUTATION and RESULT."
   (cond ((mantra-seq-p mantra)
@@ -190,21 +189,22 @@ See `mantra-eval-move' for more on COMPUTATION and RESULT."
                     &optional
                     computation
                     result)
-  "Execute a tree TRAVERSAL.
+  "Recite (evaluate) a MANTRA.
 
-TRAVERSAL could be a move, a maneuver, or any other mantra traversal.
-If it is not a mantra expression, then it is assumed to be an ELisp
-function, and the rule for interpretation is to apply the function.
+MANTRA could be a primitive key sequence, a sequence of mantras, or
+any other mantra. If it is not a specific mantra form, then it is
+assumed to be an ELisp function, and the rule for interpretation is to
+apply the function.
 
 The evaluation is done in a \"tail-recursive\" way, by passing the
-in-progress RESULT forward through subsequent stages of traversal
+in-progress RESULT forward through subsequent stages of mantra
 evaluation.
 
-This function, along with any of the more specific traversal
-evaluators such as `mantra-eval-maneuver', evaluates to a COMPUTATION
-on the traversal actually executed.
+This function, along with any of the more specific mantra evaluators
+such as `mantra-eval-seq', evaluates to a COMPUTATION on the mantra
+actually recited.
 
-See `mantra-eval-move' for more on COMPUTATION and RESULT."
+See `mantra-eval-key' for more on COMPUTATION and RESULT."
   (let* ((computation (if computation
                           computation
                         mantra--computation-default))
