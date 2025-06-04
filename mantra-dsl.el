@@ -23,6 +23,8 @@
 
 ;;; Code:
 
+(require 'cl-lib)
+
 (defun mantra-make-key (key)
   "A primitive KEY sequence."
   `(key ,key))
