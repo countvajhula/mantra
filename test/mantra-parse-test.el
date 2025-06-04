@@ -30,7 +30,7 @@
                (concat mantra-test-setup-directory dir)))
 ;;
 
-(require 'mantra)
+(require 'mantra-parse)
 
 ;;
 ;; Fixtures
