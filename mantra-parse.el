@@ -1,9 +1,4 @@
-;;; mantra.el --- Mantras, not macros! -*- lexical-binding: t -*-
-
-;; Author: Sid Kasivajhula <sid@countvajhula.com>
-;; URL: https://github.com/countvajhula/mantra
-;; Version: 0.0
-;; Package-Requires: ((emacs "25.1") (pubsub "0.0"))
+;;; mantra-parse.el --- Mantras, not macros! -*- lexical-binding: t -*-
 
 ;; This file is NOT a part of Gnu Emacs.
 
@@ -24,7 +19,7 @@
 
 ;;; Commentary:
 
-;; Mantras, not macros!
+;; Parse keyboard activity
 
 ;;; Code:
 
@@ -309,5 +304,5 @@ continue parsing."
     (mantra-accept parser)))
 
 
-(provide 'mantra)
-;;; mantra.el ends here
+(provide 'mantra-parse)
+;;; mantra-parse.el ends here
