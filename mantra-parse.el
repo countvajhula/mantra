@@ -210,7 +210,14 @@ than forwarding empty sequences."
       (mantra-parse-finish parser key-seq))))
 
 (defun mantra-register (parser)
-  "Register PARSER to receive key sequence events."
+  "Register PARSER to receive key sequence events.
+
+This is only needed for primitive parsers that directly parse key
+sequences on the Emacs command loop. For higher-level parsers that use
+the results of such primitive parsers, they need only subscribe to the
+parsed tokens, i.e., to the parsers, that they are themselves engaged
+in parsing. This would typically be accomplished by subscribing to
+these parsers using their name in the pub/sub system."
   ;; TODO: don't store duplicates
   (push parser mantra-parsers))
 
@@ -265,9 +272,9 @@ loop in some self-referential cases like repeating the last command."
                                       (funcall (mantra-parser-map parser)
                                                key-seq)))
     ;; The accept predicate is checked in `mantra-parse-finish', at
-    ;; which point state already includes key-seq. For consistency, we
-    ;; check the abort predicate here *after* incorporating key-seq
-    ;; into state.
+    ;; which point state already includes key-seq. For consistency in
+    ;; the interface, we check the abort predicate here *after*
+    ;; incorporating key-seq into state.
     (when (funcall (mantra-parser-abort parser)
                    key-seq
                    (mantra-parser-state parser))
