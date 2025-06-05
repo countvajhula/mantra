@@ -70,10 +70,53 @@ Each phase could be any mantra."
   "Check if SEQ is empty or null."
   (null (mantra--seq-phases seq)))
 
+(defun mantra-make-repetition (mantra &optional times)
+  "A specification to repeat a MANTRA TIMES times.
+
+If TIMES is nil, repeat indefinitely until the mantra fails."
+  (list 'repetition
+        mantra
+        times))
+
+(defun mantra-repetition-p (obj)
+  "Check if OBJ specifies a repetition."
+  (condition-case nil
+      (eq 'repetition
+          (nth 0 obj))
+    (error nil)))
+
+(defun mantra--repetition-mantra (repetition)
+  "Get the mantra component of the REPETITION.
+
+This is the mantra that is intended to be looped."
+  (nth 1 repetition))
+
+(defun mantra--repetition-times (repetition)
+  "Get the times component of the REPETITION.
+
+This is the number of times the mantra should be repeated."
+  (nth 2 repetition))
+
+(defun mantra--repetition-null-p (repetition)
+  "Check if REPETITION is empty or null."
+  (let ((times (mantra--repetition-times repetition)))
+    (and times (zerop times))))
+
+(defun mantra--repetition-rest (repetition)
+  "A repetition defined from the remaining repetitions of the mantra.
+
+This includes the remaining repetitions in REPETITION, not counting the
+first.  This is useful for structural recursion during repetition
+execution."
+  (let ((mantra (mantra--repetition-mantra repetition))
+        (times (mantra--repetition-times repetition)))
+    (mantra-make-repetition mantra (when times (1- times)))))
+
 (defun mantra-p (obj)
   "Check if OBJ specifies a mantra."
   (or (mantra-key-p obj)
-      (mantra-seq-p obj)))
+      (mantra-seq-p obj)
+      (mantra-repetition-p obj)))
 
 (defconst mantra--null (mantra-make-key (vector))
   "The null mantra.")
@@ -165,11 +208,38 @@ See `mantra-eval-move' for more on COMPUTATION and RESULT."
                            computation
                            executed-phase))))))
 
+(defun mantra-eval-repetition (repetition computation result)
+  "Execute a REPETITION.
+
+This repeats some mantra as specified.
+
+See `mantra-eval-key' for more on COMPUTATION and RESULT."
+  (if (mantra--repetition-null-p repetition)
+      result
+    (let ((mantra (mantra--repetition-mantra repetition))
+          (times (mantra--repetition-times repetition))
+          (remaining-repetition (mantra--repetition-rest repetition)))
+      (let ((executed-phase (mantra-eval mantra
+                                         computation
+                                         result)))
+        (if executed-phase
+            (mantra-eval-repetition remaining-repetition
+                                    computation
+                                    executed-phase)
+          (when (not times)
+            ;; if looping indefinitely, then count 0
+            ;; times executed as success
+            result))))))
+
 (defun mantra--eval (mantra computation result)
   "Helper to evaluate MANTRA.
 
 See `mantra-eval-move' for more on COMPUTATION and RESULT."
-  (cond ((mantra-seq-p mantra)
+  (cond ((mantra-repetition-p mantra)
+         (mantra-eval-repetition mantra
+                                 computation
+                                 result))
+        ((mantra-seq-p mantra)
          (mantra-eval-seq mantra
                           computation
                           result))
