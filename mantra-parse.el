@@ -195,7 +195,7 @@ parsing."
   (mantra-listen-end (this-command-keys-vector)))
 
 (defun mantra-listen-start (key-seq)
-  "Notify all parsers of a newly entered key sequence KEY-SEQ.
+  "Notify all primitive parsers of a newly entered key sequence KEY-SEQ.
 
 This does some basic \"lexing\" of the key sequence, discarding rather
 than forwarding empty sequences."
@@ -204,7 +204,10 @@ than forwarding empty sequences."
       (mantra-parse parser key-seq))))
 
 (defun mantra-listen-end (key-seq)
-  "Notify all parsers after the conclusion of a command for a key sequence KEY-SEQ."
+  "Notify all primitive parsers upon the conclusion of a command for a key sequence KEY-SEQ.
+
+This does some basic \"lexing\" of the key sequence, discarding rather
+than forwarding empty sequences."
   (when (and key-seq (not (seq-empty-p key-seq)))
     (dolist (parser mantra-parsers)
       (mantra-parse-finish parser key-seq))))
@@ -229,7 +232,23 @@ these parsers using their name in the pub/sub system."
   "Connect registered mantra parsers to the Emacs command loop.
 
 The parsers will be notified of all keyboard activity, at the
-granularity of when key sequences match a command."
+granularity of when key sequences match a command.
+
+This \"connection\" is only relevant for *primitive* parsers that
+directly parse key sequences on the Emacs command loop, which hook
+into two distinct stages of that loop --- pre-command and
+post-command.
+
+This operation in contrast to higher-level parsers which simply
+receive tokens produced by lower level parsers of interest. Such
+higher-level parsers should subscribe to the lower-level (e.g.,
+primitive) parsers using the pub/sub system, and are responsible for
+calling `mantra-parse' and `mantra-parse-finish'.
+
+The primitive parsers could potentially be streamlined to fit into the
+general pub/sub paradigm employed at higher levels of parsing, but
+doing so while preserving access to the pre-command and post-command
+states appears to be complicated."
   (add-hook 'pre-command-hook #'mantra-pre-command-listener)
   (add-hook 'post-command-hook #'mantra-post-command-listener))
 
