@@ -181,7 +181,7 @@ rather, a singleton list containing the key."
   (let* ((computation (or computation mantra--computation-default))
          (result (or result
                      (funcall (mantra--computation-map computation)
-                              mantra--null)))
+                              (vector))))
          (prim-key-seq (mantra--key-key key))
          (recited-mantra (condition-case nil
                              (progn (execute-kbd-macro prim-key-seq)
