@@ -182,12 +182,16 @@ rather, a singleton list containing the key."
          (result (or result
                      (funcall (mantra--computation-map computation)
                               mantra--null)))
-         (prim-key-seq (mantra--key-key key)))
-    (execute-kbd-macro prim-key-seq)
-    (mantra-compose-computation result
-                                (funcall (mantra--computation-map computation)
-                                         prim-key-seq)
-                                computation)))
+         (prim-key-seq (mantra--key-key key))
+         (recited-mantra (condition-case nil
+                             (progn (execute-kbd-macro prim-key-seq)
+                                    t)
+                           (error nil))))
+    (when recited-mantra
+      (mantra-compose-computation result
+                                  (funcall (mantra--computation-map computation)
+                                           prim-key-seq)
+                                  computation))))
 
 (defun mantra-eval-seq (seq computation result)
   "Execute a SEQ.
