@@ -34,7 +34,7 @@
 ;; conditions at start.
 (defvar mantra-parsers
   nil
-  "Current set of parsers actively parsing keyboard input.")
+  "Current set of primitive parsers actively parsing keyboard input.")
 
 (defconst mantra--index-name 0
   "The name of the parser.")
@@ -160,7 +160,7 @@ a single key sequence vector capturing the entire parsed stream.
 
 The state at the time of acceptance is published as the result of
 parsing."
-  (let ((abort (or abort (lambda (_key-seq _state) nil)))
+  (let ((abort (or abort (lambda (_input _state) nil)))
         (map (or map #'identity))
         (compose (or compose #'vconcat)))
     (vector name
@@ -296,7 +296,7 @@ loop in some self-referential cases like repeating the last command."
                                       (funcall (mantra-parser-map parser)
                                                input)))
     ;; The accept predicate is checked in `mantra-parse-finish', at
-    ;; which point state already includes key-seq. For consistency in
+    ;; which point state already includes input. For consistency in
     ;; the interface, we check the abort predicate here *after*
     ;; incorporating input into state.
     (when (funcall (mantra-parser-abort parser)
