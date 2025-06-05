@@ -48,17 +48,54 @@
     (lambda ()
       ,@test)))
 
+;; `with-temp-buffer' would be preferable to `progn' here
+;; but `execute-kbd-macro' resets the buffer back to the
+;; "containing" one (even with `emacs -Q`), for reasons unknown,
+;; and that causes the insertions to occur there rather than
+;; in the temporary buffer.
 (defun fixture-empty-buffer (body)
   (unwind-protect
-      (with-temp-buffer
+      (progn
         (funcall body)
-        (setq result (buffer-string)))))
+        (setq result (buffer-string))
+        (erase-buffer))))
 
 ;;
 ;; Tests
 ;;
 
-(ert-deftest mantra-eval-test ()
+(ert-deftest key-test ()
+  (let ((result))
+    (with-fixture fixture-empty-buffer
+      (mantra-eval '(key [97])))
+    (should
+     (equal "a"
+            result)))
+  (let ((result))
+    (with-fixture fixture-empty-buffer
+      (mantra-eval '(key [97 98 99 134217826 134217827])))
+    (should
+     (equal "Abc"
+            result))))
+
+(ert-deftest fallback-test ()
+  (let ((result))
+    (with-fixture fixture-empty-buffer
+      (mantra-eval (lambda (&rest args)
+                     (insert "bc"))))
+    (should
+     (equal "bc"
+            result))))
+
+(ert-deftest repetition-test ()
+  (let ((result))
+    (with-fixture fixture-empty-buffer
+      (mantra-eval '(repetition (key [97]) 3)))
+    (should
+     (equal "aaa"
+            result))))
+
+(ert-deftest seq-test ()
   (let ((result))
     (with-fixture fixture-empty-buffer
       (mantra-eval '(seq ((key [97])
@@ -68,3 +105,13 @@
      (equal "abc"
             result))))
 
+(ert-deftest mantra-eval-test ()
+  (let ((result))
+    (with-fixture fixture-empty-buffer
+      (mantra-eval '(seq ((key [97])
+                          (repetition (key [97]) 3)
+                          (lambda (&rest args)
+                            (insert "bc"))))))
+    (should
+     (equal "aaaabc"
+            result))))
