@@ -180,10 +180,15 @@ parsing."
   "Stop parsing (i.e., accept) after any key sequence."
   t)
 
+(defun mantra-basic-parser-abort (_key-seq _state)
+  "Never abort parsing."
+  nil)
+
 (defvar mantra-basic-parser
   (mantra-make-parser "mantra-all-key-sequences"
                       #'mantra-basic-parser-start
-                      #'mantra-basic-parser-stop)
+                      #'mantra-basic-parser-stop
+                      #'mantra-basic-parser-abort)
   "A parser to recognize all key sequences.")
 
 (defun mantra-pre-command-listener ()
