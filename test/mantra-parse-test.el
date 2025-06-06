@@ -66,8 +66,8 @@
   (let ((parser nil))
     (unwind-protect
         (progn (setq parser (mantra-make-parser fixture-parser-basic-name
-                                                (lambda (_key-seq) t)
-                                                (lambda (_key-seq _state) t)))
+                                                (lambda (_input) t)
+                                                (lambda (_input _state) t)))
                (funcall body))
       ;; perhaps aid garbage collection
       (setq parser nil))))
@@ -76,9 +76,9 @@
   (let ((parser nil))
     (unwind-protect
         (progn (setq parser (mantra-make-parser fixture-parser-accept-all-name
-                                                (lambda (_key-seq) t)
-                                                (lambda (_key-seq _state) t)
-                                                (lambda (_key-seq _state) nil)))
+                                                (lambda (_input) t)
+                                                (lambda (_input _state) t)
+                                                (lambda (_input _state) nil)))
                (funcall body))
       ;; perhaps aid garbage collection
       (setq parser nil))))
@@ -87,9 +87,9 @@
   (let ((parser nil))
     (unwind-protect
         (progn (setq parser (mantra-make-parser fixture-parser-accept-none-name
-                                                (lambda (_key-seq) nil)
-                                                (lambda (_key-seq _state) nil)
-                                                (lambda (_key-seq _state) nil)))
+                                                (lambda (_input) nil)
+                                                (lambda (_input _state) nil)
+                                                (lambda (_input _state) nil)))
                (funcall body))
       ;; perhaps aid garbage collection
       (setq parser nil))))
@@ -98,9 +98,9 @@
   (let ((parser nil))
     (unwind-protect
         (progn (setq parser (mantra-make-parser fixture-parser-abort-all-name
-                                                (lambda (_key-seq) t)
-                                                (lambda (_key-seq _state) nil)
-                                                (lambda (_key-seq _state) t)))
+                                                (lambda (_input) t)
+                                                (lambda (_input _state) nil)
+                                                (lambda (_input _state) t)))
                (funcall body))
       ;; perhaps aid garbage collection
       (setq parser nil))))
@@ -109,9 +109,9 @@
   (let ((parser nil))
     (unwind-protect
         (progn (setq parser (mantra-make-parser fixture-parser-accept-all-abort-all-name
-                                                (lambda (_key-seq) t)
-                                                (lambda (_key-seq _state) t)
-                                                (lambda (_key-seq _state) t)))
+                                                (lambda (_input) t)
+                                                (lambda (_input _state) t)
+                                                (lambda (_input _state) t)))
                (funcall body))
       ;; perhaps aid garbage collection
       (setq parser nil))))
