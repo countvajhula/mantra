@@ -64,16 +64,30 @@
 ;; Tests
 ;;
 
-(ert-deftest key-test ()
+(ert-deftest key-vector-test ()
   (let ((result))
     (with-fixture fixture-empty-buffer
-      (mantra-eval '(key [97])))
+      (mantra-eval [97]))
     (should
      (equal "a"
             result)))
   (let ((result))
     (with-fixture fixture-empty-buffer
-      (mantra-eval '(key [97 98 99 134217826 134217827])))
+      (mantra-eval [97 98 99 134217826 134217827]))
+    (should
+     (equal "Abc"
+            result))))
+
+(ert-deftest key-test ()
+  (let ((result))
+    (with-fixture fixture-empty-buffer
+                  (mantra-eval '(key "a")))
+    (should
+     (equal "a"
+            result)))
+  (let ((result))
+    (with-fixture fixture-empty-buffer
+      (mantra-eval '(key "abc M-b M-c")))
     (should
      (equal "Abc"
             result))))
@@ -90,7 +104,7 @@
 (ert-deftest repetition-test ()
   (let ((result))
     (with-fixture fixture-empty-buffer
-      (mantra-eval '(repetition (key [97]) 3)))
+      (mantra-eval '(repetition (key "a") 3)))
     (should
      (equal "aaa"
             result))))
@@ -98,7 +112,7 @@
 (ert-deftest seq-test ()
   (let ((result))
     (with-fixture fixture-empty-buffer
-      (mantra-eval '(seq ((key [97])
+      (mantra-eval '(seq ((key "a")
                           (lambda (&rest args)
                             (insert "bc"))))))
     (should
@@ -108,8 +122,8 @@
 (ert-deftest mantra-eval-test ()
   (let ((result))
     (with-fixture fixture-empty-buffer
-      (mantra-eval '(seq ((key [97])
-                          (repetition (key [97]) 3)
+      (mantra-eval '(seq ((key "a")
+                          (repetition (key "a") 3)
                           (lambda (&rest args)
                             (insert "bc"))))))
     (should

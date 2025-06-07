@@ -118,7 +118,7 @@ execution."
       (mantra-seq-p obj)
       (mantra-repetition-p obj)))
 
-(defconst mantra--null (mantra-make-key (vector))
+(defconst mantra--null (vector)
   "The null mantra.")
 
 (cl-defun mantra-make-computation (&key
@@ -161,13 +161,13 @@ computation B into an aggregate result."
 Each result is wrapped in a list.  These are concatenated using list
 concatenation.")
 
-(defun mantra-eval-key (key &optional computation result)
-  "Evaluate KEY.
+(defun mantra-eval-key-vector (key-vector &optional computation result)
+  "Evaluate KEY-VECTOR.
 
-A key is a primitive Emacs key sequence and the base case of mantra
-evaluation. It is evaluated using `execute-kbd-macro', and the overall
-computation is stitched together in terms of the executed key and the
-accumulated result.
+A key vector is a primitive Emacs key sequence and the base case of
+mantra evaluation. It is evaluated using `execute-kbd-macro', and the
+overall computation is stitched together in terms of the executed key
+and the accumulated result.
 
 To do this, the executed key is first parsed via the `map' predicate,
 and then combined with the RESULT so far using the `compose'
@@ -181,17 +181,26 @@ rather, a singleton list containing the key."
   (let* ((computation (or computation mantra--computation-default))
          (result (or result
                      (funcall (mantra--computation-map computation)
-                              (vector))))
-         (prim-key-seq (mantra--key-key key))
+                              mantra--null)))
          (recited-mantra (condition-case nil
-                             (progn (execute-kbd-macro prim-key-seq)
+                             (progn (execute-kbd-macro key-vector)
                                     t)
                            (error nil))))
     (when recited-mantra
       (mantra-compose-computation result
                                   (funcall (mantra--computation-map computation)
-                                           prim-key-seq)
+                                           key-vector)
                                   computation))))
+
+(defun mantra-eval-key (key &optional computation result)
+  "Evaluate KEY.
+
+A KEY is a string representation of a key sequence. It is translated
+in a straightforward way to the primitive key vector representation to
+be evaluated."
+  (let ((key-string (mantra--key-key key)))
+    (mantra-eval-key-vector (string-to-vector
+                             (kbd key-string)))))
 
 (defun mantra-eval-seq (seq computation result)
   "Execute a SEQ.
@@ -251,6 +260,10 @@ See `mantra-eval-move' for more on COMPUTATION and RESULT."
          (mantra-eval-key mantra
                           computation
                           result))
+        ((vectorp mantra)
+         (mantra-eval-key-vector mantra
+                                 computation
+                                 result))
         ;; fall back to a lambda. It must still accept
         ;; the same arguments as any mantra, so that
         ;; it could in principle produce a valid result
@@ -285,8 +298,8 @@ See `mantra-eval-key' for more on COMPUTATION and RESULT."
                           computation
                         mantra--computation-default))
          (result (or result
-                     (mantra-eval-key mantra--null
-                                      computation))))
+                     (mantra-eval-key-vector mantra--null
+                                             computation))))
     (mantra--eval mantra
                   computation
                   result)))
