@@ -57,8 +57,8 @@
   (unwind-protect
       (progn
         (funcall body)
-        (setq result (buffer-string))
-        (erase-buffer))))
+        (setq result (buffer-string)))
+    (erase-buffer)))
 
 ;;
 ;; Tests
