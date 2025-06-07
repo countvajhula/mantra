@@ -133,6 +133,8 @@
      (equal "abc"
             result))))
 
+;; TODO: tests for different computations
+;; using all of the forms, incl. key and insertion
 (ert-deftest mantra-eval-test ()
   (let ((result))
     (with-fixture fixture-empty-buffer

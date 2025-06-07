@@ -217,7 +217,9 @@ in a straightforward way to the primitive key vector representation to
 be evaluated."
   (let ((key-string (mantra--key-key key)))
     (mantra-eval-key-vector (string-to-vector
-                             (kbd key-string)))))
+                             (kbd key-string))
+                            computation
+                            result)))
 
 (defun mantra-eval-seq (seq computation result)
   "Execute a SEQ.
@@ -267,8 +269,12 @@ See `mantra-eval-key' for more on COMPUTATION and RESULT."
 An insertion when evaluated inserts text into the buffer.
 
 Like key vectors, this is a primitive operation of the Mantra DSL."
-  (let ((text (mantra--insertion-text insertion)))
-    (insert text)))
+  (let ((text (mantra--insertion-text insertion))
+        (result (or result
+                    (funcall (mantra--computation-map computation)
+                             mantra--null))))
+    (insert text)
+    result))
 
 (defun mantra--eval (mantra computation result)
   "Helper to evaluate MANTRA.
