@@ -172,23 +172,23 @@ parsing."
             ;; initialize to null state
             (funcall map (vector)))))
 
-(defun mantra-basic-parser-start (_key-seq)
+(defun mantra-key-sequences-parser-start (_key-seq)
   "Start parsing on any key sequence."
   t)
 
-(defun mantra-basic-parser-stop (_key-seq _state)
+(defun mantra-key-sequences-parser-stop (_key-seq _state)
   "Stop parsing (i.e., accept) after any key sequence."
   t)
 
-(defun mantra-basic-parser-abort (_key-seq _state)
+(defun mantra-key-sequences-parser-abort (_key-seq _state)
   "Never abort parsing."
   nil)
 
-(defvar mantra-basic-parser
-  (mantra-make-parser "mantra-all-key-sequences"
-                      #'mantra-basic-parser-start
-                      #'mantra-basic-parser-stop
-                      #'mantra-basic-parser-abort)
+(defvar mantra-key-sequences-parser
+  (mantra-make-parser "mantra-key-sequences"
+                      #'mantra-key-sequences-parser-start
+                      #'mantra-key-sequences-parser-stop
+                      #'mantra-key-sequences-parser-abort)
   "A parser to recognize all key sequences.")
 
 (defun mantra-pre-command-listener ()
