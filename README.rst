@@ -162,6 +162,11 @@ After fixing the problem, you can reinstate mantra listening on the command loop
 
   (mantra-connect)
 
+Higher Level Parsers
+--------------------
+
+Parsers of the kind we defined above are *primitive* parsers operating directly on key sequences entered on the Emacs command loop. But you may wish to parse richer structure using the results of these lower-level parsers. ``mantra-subscribe`` allows you to describe such pairwise subscription relationships amongst parsers, abstracting the details of feeding the output of one parser as input to the next. You can ``mantra-unsubscribe`` when you're done.
+
 How It Works
 ------------
 
