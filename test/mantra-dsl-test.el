@@ -133,15 +133,44 @@
      (equal "abc"
             result))))
 
-;; TODO: tests for different computations
-;; using all of the forms, incl. key and insertion
 (ert-deftest mantra-eval-test ()
   (let ((result))
     (with-fixture fixture-empty-buffer
-      (mantra-eval '(seq ((key "a")
-                          (repetition (key "a") 3)
+      (mantra-eval '(seq ((repetition (key "a") 3)
+                          (key "b")
+                          (insertion "c")
                           (lambda (&rest args)
-                            (insert "bc"))))))
+                            (insert "def"))))))
     (should
-     (equal "aaaabc"
-            result))))
+     (equal "aaabcdef"
+            result)))
+
+  ;; using a nondefault computation doesn't change the behavior
+  (let ((result))
+    (with-fixture fixture-empty-buffer
+      (mantra-eval '(seq ((repetition (key "a") 3)
+                          (key "b")
+                          (insertion "c")
+                          (lambda (&rest args)
+                            (insert "def"))))
+                   (mantra-make-computation :map #'list
+                                            :compose #'append)))
+    (should
+     (equal "aaabcdef"
+            result)))
+
+  ;; computation computes expected result
+  (with-fixture fixture-empty-buffer
+    (let ((result
+           (mantra-eval '(seq ((repetition (key "a") 3)
+                               (key "b")
+                               (insertion "c")
+                               (lambda (computation result)
+                                 (insert "def")
+                                 result)))
+                        (mantra-make-computation :map #'list
+                                                 :compose #'append))))
+      (should
+       ;; TODO: why the two leading empty vectors?
+       (equal '([] [] [97] [97] [97] [98])
+              result)))))
