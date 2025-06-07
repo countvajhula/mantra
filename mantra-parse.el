@@ -209,7 +209,10 @@ than forwarding empty sequences."
       (mantra-parse parser key-seq))))
 
 (defun mantra-listen-end (key-seq)
-  "Notify all primitive parsers upon the conclusion of a command for a key sequence KEY-SEQ.
+  "Notify all primitive parsers upon the conclusion of a command.
+
+The command just concluded is in connection with the key sequence
+KEY-SEQ.
 
 This does some basic \"lexing\" of the key sequence, discarding rather
 than forwarding empty sequences."
@@ -267,6 +270,32 @@ states appears to be complicated."
   (mantra-connect)
   ;; clear the list of registered parsers, for good measure
   (setq mantra-parsers nil))
+
+(defun mantra-subscribe (publisher subscriber)
+  "Subscribe SUBSCRIBER to PUBLISHER.
+
+Both arguments are expected to be parsers.
+
+This could be done directly by clients, as the \"data bus\" being used
+to publish parsed tokens is the \"public\" pubsub library, dynamically
+available in Emacs and not specific to Mantra. But it's useful to
+encapsulate the details of feeding parsers input here, as it affords a
+simple interface for clients in terms of just defining parsers and
+specifying pairwise subscriptions amongst them, instead of worrying
+about actually connecting them and feeding the tokens forward in the
+proper way (as we do here)."
+  (pubsub-subscribe (mantra-parser-name publisher)
+                    (mantra-parser-name subscriber)
+                    (lambda (input)
+                      (mantra-parse subscriber input)
+                      (mantra-parse-finish subscriber input))))
+
+(defun mantra-unsubscribe (publisher subscriber)
+  "Unsubscribe SUBSCRIBER from PUBLISHER.
+
+Both arguments are expected to be parsers."
+  (pubsub-unsubscribe (mantra-parser-name publisher)
+                      (mantra-parser-name subscriber)))
 
 (defun mantra-parsing-in-progress-p (parser)
   "Whether PARSER is already parsing, i.e., accumulating state."

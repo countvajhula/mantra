@@ -154,6 +154,30 @@
     (mantra-parser-set-state parser fixture-single-key)
     (funcall body-3)))
 
+(defun fixture-multi-level-parsers (body-4)
+  (with-fixture fixture-parser-with-state
+    (let* ((my-parser (mantra-make-parser "my-parser"
+                                          (lambda (_i) t)
+                                          (lambda (_i _s) t)
+                                          nil
+                                          (lambda (input)
+                                            (list (list 'my-parser input)))
+                                          #'append))
+           ;; subscriber for the final result (of the second parser)
+           (my-subscriber (lambda (input)
+                            ;; note: expects `result' to be
+                            ;; (dynamically) bound in the calling test
+                            (setq result input))))
+      (unwind-protect
+          (progn (mantra-subscribe parser my-parser)
+                 (pubsub-subscribe (mantra-parser-name my-parser)
+                                   "my-subscriber"
+                                   my-subscriber)
+                 (funcall body-4))
+        (mantra-unsubscribe parser my-parser)
+        (pubsub-unsubscribe (mantra-parser-name my-parser)
+                            "my-subscriber")))))
+
 (defmacro with-key-listening (&rest test)
   (declare (indent 0))
   `(unwind-protect
@@ -165,10 +189,17 @@
   (let* ((result nil)
          (subscriber (lambda (parsed-keys)
                        (setq result parsed-keys))))
-    (pubsub-subscribe (mantra-parser-name parser)
-                      fixture-subscriber-name
-                      subscriber)
-    (funcall body-2)))
+    (unwind-protect
+        (progn (pubsub-subscribe (mantra-parser-name parser)
+                                 fixture-subscriber-name
+                                 subscriber)
+               (funcall body-2))
+      ;; it's especially important to unsubscribe because due to
+      ;; dynamic scope, this "zombie" listener would otherwise remain
+      ;; active and would be capable of overwriting dynamic local
+      ;; variables like `result' in other tests
+      (pubsub-unsubscribe (mantra-parser-name parser)
+                          fixture-subscriber-name))))
 
 ;;
 ;; Tests
@@ -337,3 +368,17 @@
       (should (equal fixture-single-key
                      result))
       (should-not (mantra-parsing-in-progress-p parser)))))
+
+(ert-deftest mantra-subscribe-test ()
+  ;; subscriber receives parsed tokens
+  (with-fixture fixture-multi-level-parsers
+    (let ((result nil))
+      (mantra-parse-finish parser fixture-single-key)
+      (should (equal '((my-parser []) (my-parser [108]))
+                     result))))
+  ;; subscriber stops receiving parsed tokens upon unsubscribing
+  (with-fixture fixture-multi-level-parsers
+    (let ((result nil))
+      (mantra-unsubscribe parser my-parser)
+      (mantra-parse-finish parser fixture-single-key)
+      (should-not result))))
