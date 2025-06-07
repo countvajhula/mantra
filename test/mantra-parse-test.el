@@ -257,8 +257,8 @@
                             []
                             [1 2 3])))))
 
-(ert-deftest mantra-basic-parser-test ()
-  (let ((parser mantra-basic-parser))
+(ert-deftest mantra-key-sequences-parser-test ()
+  (let ((parser mantra-key-sequences-parser))
     (should (funcall (mantra-parser-start parser) "a"))
     (should (funcall (mantra-parser-stop parser) "abc" [97 98 99]))
     (should-not (funcall (mantra-parser-abort parser) "abc" [97 98 99]))))
