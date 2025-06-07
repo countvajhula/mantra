@@ -229,8 +229,8 @@ the results of such primitive parsers, they need only subscribe to the
 parsed tokens, i.e., to the parsers, that they are themselves engaged
 in parsing. This would typically be accomplished by subscribing to
 these parsers using their name in the pub/sub system."
-  ;; TODO: don't store duplicates
-  (push parser mantra-parsers))
+  (delete-dups
+   (push parser mantra-parsers)))
 
 (defun mantra-unregister (parser)
   "Unregister PARSER so it doesn't receive further key sequence events."

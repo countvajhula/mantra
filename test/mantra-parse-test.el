@@ -257,6 +257,22 @@
                             []
                             [1 2 3])))))
 
+(ert-deftest mantra-register-test ()
+  ;; registering a parser
+  (let ((parser mantra-key-sequences-parser))
+    (mantra-register parser)
+    (should (member parser mantra-parsers)))
+
+  ;; parser isn't registered more than once
+  (let ((parser mantra-key-sequences-parser))
+    (mantra-register parser)
+    (mantra-register parser)
+    (setq mantra-parsers
+          (cl-remove parser
+                     mantra-parsers
+                     :count 1))
+    (should-not (member parser mantra-parsers))))
+
 (ert-deftest mantra-key-sequences-parser-test ()
   (let ((parser mantra-key-sequences-parser))
     (should (funcall (mantra-parser-start parser) "a"))
