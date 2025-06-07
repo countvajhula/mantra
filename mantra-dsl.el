@@ -112,11 +112,28 @@ execution."
         (times (mantra--repetition-times repetition)))
     (mantra-make-repetition mantra (when times (1- times)))))
 
+(defun mantra-make-insertion (text)
+  "A primitive operation to insert text into a buffer."
+  `(insertion ,text))
+
+(defun mantra--insertion-text (insertion)
+  "The text to insert in INSERTION."
+  (cadr insertion))
+
+(defun mantra-insertion-p (obj)
+  "Check if OBJ specifies an insertion."
+  (condition-case nil
+      (eq 'insertion
+          (nth 0 obj))
+    (error nil)))
+
 (defun mantra-p (obj)
   "Check if OBJ specifies a mantra."
-  (or (mantra-key-p obj)
+  (or (vectorp obj)
+      (mantra-key-p obj)
       (mantra-seq-p obj)
-      (mantra-repetition-p obj)))
+      (mantra-repetition-p obj)
+      (mantra-insertion-p obj)))
 
 (defconst mantra--null (vector)
   "The null mantra.")
@@ -244,6 +261,15 @@ See `mantra-eval-key' for more on COMPUTATION and RESULT."
             ;; times executed as success
             result))))))
 
+(defun mantra-eval-insertion (insertion &optional computation result)
+  "Evaluate INSERTION.
+
+An insertion when evaluated inserts text into the buffer.
+
+Like key vectors, this is a primitive operation of the Mantra DSL."
+  (let ((text (mantra--insertion-text insertion)))
+    (insert text)))
+
 (defun mantra--eval (mantra computation result)
   "Helper to evaluate MANTRA.
 
@@ -264,6 +290,10 @@ See `mantra-eval-move' for more on COMPUTATION and RESULT."
          (mantra-eval-key-vector mantra
                                  computation
                                  result))
+        ((mantra-insertion-p mantra)
+         (mantra-eval-insertion mantra
+                                computation
+                                result))
         ;; fall back to a lambda. It must still accept
         ;; the same arguments as any mantra, so that
         ;; it could in principle produce a valid result

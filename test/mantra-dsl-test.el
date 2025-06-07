@@ -92,6 +92,20 @@
      (equal "Abc"
             result))))
 
+(ert-deftest insertion-test ()
+  (let ((result))
+    (with-fixture fixture-empty-buffer
+      (mantra-eval '(insertion "a")))
+    (should
+     (equal "a"
+            result)))
+  (let ((result))
+    (with-fixture fixture-empty-buffer
+      (mantra-eval '(insertion "hello C-c C-v M-f there")))
+    (should
+     (equal "hello C-c C-v M-f there"
+            result))))
+
 (ert-deftest fallback-test ()
   (let ((result))
     (with-fixture fixture-empty-buffer
