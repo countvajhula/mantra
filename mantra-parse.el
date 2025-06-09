@@ -287,8 +287,7 @@ proper way (as we do here)."
   (pubsub-subscribe (mantra-parser-name publisher)
                     (mantra-parser-name subscriber)
                     (lambda (input)
-                      (mantra-parse subscriber input)
-                      (mantra-parse-finish subscriber input))))
+                      (mantra-feed-parser subscriber input))))
 
 (defun mantra-unsubscribe (publisher subscriber)
   "Unsubscribe SUBSCRIBER from PUBLISHER.
@@ -362,6 +361,15 @@ continue parsing."
                       input
                       (mantra-parser-state parser)))
     (mantra-accept parser)))
+
+(defun mantra-feed-parser (parser input)
+  "Feed INPUT to PARSER.
+
+For higher-level (non-primitive) parsers, the `parse' and
+`parse-finish' stages are done together rather than at separate times,
+so this function that does both may be used, as a convenience."
+  (mantra-parse parser input)
+  (mantra-parse-finish parser input))
 
 
 (provide 'mantra-parse)
