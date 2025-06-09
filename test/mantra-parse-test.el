@@ -178,13 +178,6 @@
         (pubsub-unsubscribe (mantra-parser-name my-parser)
                             "my-subscriber")))))
 
-(defmacro with-key-listening (&rest test)
-  (declare (indent 0))
-  `(unwind-protect
-        (progn (mantra-register parser)
-               ,@test)
-      (pop mantra-parsers)))
-
 (defun fixture-subscriber (body-2)
   (let* ((result nil)
          (subscriber (lambda (parsed-keys)
@@ -296,24 +289,6 @@
     (should (equal [] (mantra-parser-null-state parser))))
   (with-fixture fixture-parser-nondefault
     (should (equal "" (mantra-parser-null-state parser)))))
-
-(ert-deftest key-listening-test ()
-  (with-fixture fixture-parser-accept-all
-    (with-key-listening
-     (should (member parser mantra-parsers))))
-  (with-fixture fixture-parser-accept-all
-    (with-key-listening
-     (mantra-unregister parser)
-     (should-not (member parser mantra-parsers))))
-  (with-fixture fixture-parser-accept-all
-    (with-key-listening
-     (mantra-listen-start fixture-single-key)
-     (should (mantra-parsing-in-progress-p parser))))
-  (with-fixture fixture-parser-accept-all
-    (with-key-listening
-     (mantra-listen-start fixture-single-key)
-     (mantra-listen-end fixture-single-key)
-     (should-not (mantra-parsing-in-progress-p parser)))))
 
 (ert-deftest mantra-parsing-in-progress-test ()
   (with-fixture fixture-parser-accept-all

@@ -131,17 +131,16 @@ be used as the topic for publishing output in a global pub/sub system,
 it should follow Emacs's naming conventions for global identifiers.
 Specifically, the name should be prefixed with the package name.
 
-The START condition is checked in `pre-command-hook' and STOP and
-ABORT conditions are checked in `post-command-hook'.  Once START is
-satisfied, the key sequences (themselves, by default) are accumulated
-in the parser state as a composed key sequence (vector).  When STOP is
-satisfied (which might happen during invocation of the same command,
-or it might not), a match event is published containing the entire
-sequence in STATE as a single key sequence vector (once again, by
-default.  The specific nature of the parsed data can be defined using
-the MAP and COMPOSE predicates, as explained below).  If ABORT is
-satisfied during parsing, the state is cleared.  If no ABORT condition
-is specified, a default one is used that never aborts.
+The START and STOP conditions are checked in `post-command-hook'. Once
+START is satisfied, the key sequences (themselves, by default) are
+accumulated in the parser state as a composed key sequence (vector).
+When STOP is satisfied (which might happen during invocation of the
+same command, or it might not), a match event is published containing
+the entire sequence in STATE as a single key sequence vector (once
+again, by default. The specific nature of the parsed data can be
+defined using the MAP and COMPOSE predicates, as explained below). If
+ABORT is satisfied during parsing, the state is cleared. If no ABORT
+condition is specified, a default one is used that never aborts.
 
 MAP and COMPOSE define how the result of parsing is constructed and
 composed.  MAP is a function of one argument that is invoked with the
@@ -191,34 +190,17 @@ parsing."
                       #'mantra-key-sequences-parser-abort)
   "A parser to recognize all key sequences.")
 
-(defun mantra-pre-command-listener ()
-  "Listen for the key sequences on the Emacs command loop."
-  (mantra-listen-start (this-command-keys-vector)))
-
 (defun mantra-post-command-listener ()
-  "Listen for the key sequences on the Emacs command loop."
-  (mantra-listen-end (this-command-keys-vector)))
+  "Listen for the key sequences on the Emacs command loop.
 
-(defun mantra-listen-start (key-seq)
-  "Notify all primitive parsers of a newly entered key sequence KEY-SEQ.
+Notify all primitive parsers of a newly entered key sequence KEY-SEQ.
 
 This does some basic \"lexing\" of the key sequence, discarding rather
 than forwarding empty sequences."
-  (when (and key-seq (not (seq-empty-p key-seq)))
-    (dolist (parser mantra-parsers)
-      (mantra-parse parser key-seq))))
-
-(defun mantra-listen-end (key-seq)
-  "Notify all primitive parsers upon the conclusion of a command.
-
-The command just concluded is in connection with the key sequence
-KEY-SEQ.
-
-This does some basic \"lexing\" of the key sequence, discarding rather
-than forwarding empty sequences."
-  (when (and key-seq (not (seq-empty-p key-seq)))
-    (dolist (parser mantra-parsers)
-      (mantra-parse-finish parser key-seq))))
+  (let ((key-seq (this-command-keys-vector)))
+    (when (and key-seq (not (seq-empty-p key-seq)))
+      (dolist (parser mantra-parsers)
+        (mantra-feed-parser parser key-seq)))))
 
 (defun mantra-register (parser)
   "Register PARSER to receive key sequence events.
@@ -243,26 +225,11 @@ The parsers will be notified of all keyboard activity, at the
 granularity of when key sequences match a command.
 
 This \"connection\" is only relevant for *primitive* parsers that
-directly parse key sequences on the Emacs command loop, which hook
-into two distinct stages of that loop --- pre-command and
-post-command.
-
-This operation in contrast to higher-level parsers which simply
-receive tokens produced by lower level parsers of interest. Such
-higher-level parsers should subscribe to the lower-level (e.g.,
-primitive) parsers using the pub/sub system, and are responsible for
-calling `mantra-parse' and `mantra-parse-finish'.
-
-The primitive parsers could potentially be streamlined to fit into the
-general pub/sub paradigm employed at higher levels of parsing, but
-doing so while preserving access to the pre-command and post-command
-states appears to be complicated."
-  (add-hook 'pre-command-hook #'mantra-pre-command-listener)
+directly parse key sequences on the Emacs command loop."
   (add-hook 'post-command-hook #'mantra-post-command-listener))
 
 (defun mantra-disconnect ()
   "Disconnect registered mantra parsers from the Emacs command loop."
-  (remove-hook 'pre-command-hook #'mantra-pre-command-listener)
   (remove-hook 'post-command-hook #'mantra-post-command-listener))
 
 (defun mantra-initialize ()
