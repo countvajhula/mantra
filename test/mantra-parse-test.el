@@ -169,12 +169,14 @@
                             ;; (dynamically) bound in the calling test
                             (setq result input))))
       (unwind-protect
-          (progn (mantra-subscribe parser my-parser)
+          (progn (mantra-subscribe (mantra-parser-name parser)
+                                   my-parser)
                  (pubsub-subscribe (mantra-parser-name my-parser)
                                    "my-subscriber"
                                    my-subscriber)
                  (funcall body-4))
-        (mantra-unsubscribe parser my-parser)
+        (mantra-unsubscribe (mantra-parser-name parser)
+                            my-parser)
         (pubsub-unsubscribe (mantra-parser-name my-parser)
                             "my-subscriber")))))
 
@@ -249,28 +251,6 @@
                    (funcall (mantra-parser-compose parser)
                             []
                             [1 2 3])))))
-
-(ert-deftest mantra-register-test ()
-  ;; registering a parser
-  (let ((parser mantra-key-sequences-parser))
-    (mantra-register parser)
-    (should (member parser mantra-parsers)))
-
-  ;; parser isn't registered more than once
-  (let ((parser mantra-key-sequences-parser))
-    (mantra-register parser)
-    (mantra-register parser)
-    (setq mantra-parsers
-          (cl-remove parser
-                     mantra-parsers
-                     :count 1))
-    (should-not (member parser mantra-parsers))))
-
-(ert-deftest mantra-key-sequences-parser-test ()
-  (let ((parser mantra-key-sequences-parser))
-    (should (funcall (mantra-parser-start parser) "a"))
-    (should (funcall (mantra-parser-stop parser) "abc" [97 98 99]))
-    (should-not (funcall (mantra-parser-abort parser) "abc" [97 98 99]))))
 
 (ert-deftest state-test ()
   (with-fixture fixture-parser-accept-all
@@ -370,6 +350,7 @@
   ;; subscriber stops receiving parsed tokens upon unsubscribing
   (with-fixture fixture-multi-level-parsers
     (let ((result nil))
-      (mantra-unsubscribe parser my-parser)
+      (mantra-unsubscribe (mantra-parser-name parser)
+                          my-parser)
       (mantra-parse-finish parser fixture-single-key)
       (should-not result))))

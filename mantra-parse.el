@@ -28,14 +28,6 @@
 
 (require 'pubsub)
 
-;; TODO: instead of having a dynamic global,
-;; we could define languages as sets of parsers,
-;; and infer the appropriate language based on
-;; conditions at start.
-(defvar mantra-parsers
-  nil
-  "Current set of primitive parsers actively parsing keyboard input.")
-
 (defconst mantra--index-name 0
   "The name of the parser.")
 
@@ -171,25 +163,6 @@ parsing."
             ;; initialize to null state
             (funcall map (vector)))))
 
-(defun mantra-key-sequences-parser-start (_key-seq)
-  "Start parsing on any key sequence."
-  t)
-
-(defun mantra-key-sequences-parser-stop (_key-seq _state)
-  "Stop parsing (i.e., accept) after any key sequence."
-  t)
-
-(defun mantra-key-sequences-parser-abort (_key-seq _state)
-  "Never abort parsing."
-  nil)
-
-(defvar mantra-key-sequences-parser
-  (mantra-make-parser "mantra-key-sequences"
-                      #'mantra-key-sequences-parser-start
-                      #'mantra-key-sequences-parser-stop
-                      #'mantra-key-sequences-parser-abort)
-  "A parser to recognize all key sequences.")
-
 (defun mantra-post-command-listener ()
   "Listen for the key sequences on the Emacs command loop.
 
@@ -199,24 +172,8 @@ This does some basic \"lexing\" of the key sequence, discarding rather
 than forwarding empty sequences."
   (let ((key-seq (this-command-keys-vector)))
     (when (and key-seq (not (seq-empty-p key-seq)))
-      (dolist (parser mantra-parsers)
-        (mantra-feed-parser parser key-seq)))))
-
-(defun mantra-register (parser)
-  "Register PARSER to receive key sequence events.
-
-This is only needed for primitive parsers that directly parse key
-sequences on the Emacs command loop. For higher-level parsers that use
-the results of such primitive parsers, they need only subscribe to the
-parsed tokens, i.e., to the parsers, that they are themselves engaged
-in parsing. This would typically be accomplished by subscribing to
-these parsers using their name in the pub/sub system."
-  (delete-dups
-   (push parser mantra-parsers)))
-
-(defun mantra-unregister (parser)
-  "Unregister PARSER so it doesn't receive further key sequence events."
-  (setq mantra-parsers (remove parser mantra-parsers)))
+      (pubsub-publish "mantra-key-sequences"
+                      key-seq))))
 
 (defun mantra-connect ()
   "Connect registered mantra parsers to the Emacs command loop.
@@ -232,16 +189,10 @@ directly parse key sequences on the Emacs command loop."
   "Disconnect registered mantra parsers from the Emacs command loop."
   (remove-hook 'post-command-hook #'mantra-post-command-listener))
 
-(defun mantra-initialize ()
-  "Register an initial basic parser that accepts any key sequence."
-  (mantra-connect)
-  ;; clear the list of registered parsers, for good measure
-  (setq mantra-parsers nil))
+(defun mantra-subscribe (topic subscriber)
+  "Subscribe SUBSCRIBER to TOPIC.
 
-(defun mantra-subscribe (publisher subscriber)
-  "Subscribe SUBSCRIBER to PUBLISHER.
-
-Both arguments are expected to be parsers.
+SUBSCRIBER is expected to be a parser, and TOPIC, a string.
 
 This could be done directly by clients, as the \"data bus\" being used
 to publish parsed tokens is the \"public\" pubsub library, dynamically
@@ -251,16 +202,18 @@ simple interface for clients in terms of just defining parsers and
 specifying pairwise subscriptions amongst them, instead of worrying
 about actually connecting them and feeding the tokens forward in the
 proper way (as we do here)."
-  (pubsub-subscribe (mantra-parser-name publisher)
+  (pubsub-subscribe topic
                     (mantra-parser-name subscriber)
                     (lambda (input)
-                      (mantra-feed-parser subscriber input))))
+                      (mantra-feed-parser subscriber
+                                          input))))
 
-(defun mantra-unsubscribe (publisher subscriber)
-  "Unsubscribe SUBSCRIBER from PUBLISHER.
+(defun mantra-unsubscribe (topic subscriber)
+  "Unsubscribe SUBSCRIBER from TOPIC.
 
-Both arguments are expected to be parsers."
-  (pubsub-unsubscribe (mantra-parser-name publisher)
+
+SUBSCRIBER is expected to be a parser, and TOPIC, a string."
+  (pubsub-unsubscribe topic
                       (mantra-parser-name subscriber)))
 
 (defun mantra-parsing-in-progress-p (parser)
@@ -281,7 +234,11 @@ present invocation, then also check the abort condition for the parser
 to see if parsing should be aborted. This is done at this stage before
 the actual command is executed (i.e., not in `mantra-parse-finish'
 like checking the accept predicate) to support avoiding an infinite
-loop in some self-referential cases like repeating the last command."
+loop in some self-referential cases like repeating the last command.
+
+INPUT could be anything, but may typically be the current key sequence
+entered on the Emacs command loop. Aborting or accepting is based on
+the entire parsed state in PARSER, not just the current key sequence."
   (when (or (mantra-parsing-in-progress-p parser)
             (funcall (mantra-parser-start parser)
                      input))
@@ -332,9 +289,24 @@ continue parsing."
 (defun mantra-feed-parser (parser input)
   "Feed INPUT to PARSER.
 
-For higher-level (non-primitive) parsers, the `parse' and
-`parse-finish' stages are done together rather than at separate times,
-so this function that does both may be used, as a convenience."
+Typically, the `parse' and `parse-finish' stages are done together
+rather than at separate times, so this function that does both may be
+used, as a convenience.
+
+But having them be separate interfaces allows the client to decide
+when the parser accepts or aborts, lending additional flexibility in
+cases where perhaps greedy matching may not be desirable.
+
+For instance, if anything starting with \"h\" and ending with \"ello\"
+happens to be a valid parse for some language, and if we provide the
+input \"hellohairyello\" incrementally, `mantra-feed-parser' would
+accept \"hello\" and \"hairyello\", but using the interfaces
+separately allows us to parse either this result, or even the entire
+input, as a valid expression.
+
+Although I'm not aware of a current use for it, it doesn't hurt to
+separately provide `parse' and `parse-finish', and it also makes
+these stages easier to test."
   (mantra-parse parser input)
   (mantra-parse-finish parser input))
 
