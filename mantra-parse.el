@@ -163,30 +163,37 @@ parsing."
             ;; initialize to null state
             (funcall map (vector)))))
 
+(defconst mantra-key-sequences-topic
+  "mantra-key-sequences"
+  "The topic under which elementary key sequences will be published.
+
+Publishing key sequences read on the Emacs command loop is provided as
+a convenience, as this may be a common input source and it is useful
+to parse it using the standard pub/sub paradigm. It is only relevant
+if `mantra-connect' has been called, i.e., when clients are interested
+in parsing key sequences.")
+
 (defun mantra-post-command-listener ()
   "Listen for the key sequences on the Emacs command loop.
 
-Notify all primitive parsers of a newly entered key sequence KEY-SEQ.
+Publish the newly entered key sequence KEY-SEQ on pub/sub.
 
 This does some basic \"lexing\" of the key sequence, discarding rather
 than forwarding empty sequences."
   (let ((key-seq (this-command-keys-vector)))
     (when (and key-seq (not (seq-empty-p key-seq)))
-      (pubsub-publish "mantra-key-sequences"
+      (pubsub-publish mantra-key-sequences-topic
                       key-seq))))
 
 (defun mantra-connect ()
-  "Connect registered mantra parsers to the Emacs command loop.
+  "Connect to the Emacs command loop and publish all entered key sequences.
 
-The parsers will be notified of all keyboard activity, at the
-granularity of when key sequences match a command.
-
-This \"connection\" is only relevant for *primitive* parsers that
-directly parse key sequences on the Emacs command loop."
+Key sequences are published at the granularity of when they match a
+command."
   (add-hook 'post-command-hook #'mantra-post-command-listener))
 
 (defun mantra-disconnect ()
-  "Disconnect registered mantra parsers from the Emacs command loop."
+  "Stop publishing key sequences read on the Emacs command loop."
   (remove-hook 'post-command-hook #'mantra-post-command-listener))
 
 (defun mantra-subscribe (topic subscriber)
