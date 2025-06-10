@@ -154,6 +154,9 @@ As advice is a general way to augment function behavior, you can use this approa
 Troubleshooting
 ---------------
 
+No Input?
+~~~~~~~~~
+
 If you ever write a parser that has an unhandled error in it, Emacs will disable the corresponding listener (in this case, Mantra) on the command loop so that Emacs remains functional. At this point, Mantra parsers will no longer be notified of any activity on the command loop. You might see a sign this has happened in the Messages buffer:
 
 .. code-block:: elisp
@@ -165,6 +168,11 @@ After fixing the problem, you can reinstate mantra listening on the command loop
 .. code-block:: elisp
 
   (mantra-connect)
+
+Avoiding Memory Leaks
+~~~~~~~~~~~~~~~~~~~~~
+
+If you have unsound accept and abort conditions that may allow the possibility of indefinite parsing and accumulation of state, your parser would take up more and more memory over time, and that could slow down Emacs. If you have reason to believe this cannot happen with your parser and the conditions you've defined, then that's great, and of course, that should be the goal. But to be absolutely sure, as a failsafe, consider defining an upper bound to the size of the state, and aborting if it exceeds that size.
 
 Using Other Input Sources
 -------------------------
