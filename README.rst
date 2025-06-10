@@ -16,7 +16,7 @@ mantra
 ===========
 Parse and compose keyboard activity in Emacs.
 
-This package could conceivably be used to implement packages resembling yasnippet, evil-repeat, Emacs's keyboard macro ring, Evil jumps and changes, winner mode, and much more.
+This package could conceivably be used to implement packages resembling yasnippet, evil-repeat, Emacs's keyboard macro ring, Evil jumps and changes, winner mode, and more.
 
 Installation
 ------------
@@ -38,31 +38,33 @@ Use
 Creating a Parser
 ~~~~~~~~~~~~~~~~~
 
-To get started with Mantra, first create a parser. For convenience, Mantra includes a basic parser that parses all individual key sequences. It's defined this way:
+To get started with Mantra, first create a parser.
+
+A common input source we might want to parse is key sequences entered on the Emacs command loop. Let's parse this data to get a feel for things, and we'll start by writing the simplest possible parser: one that accepts any input given to it.
 
 .. code-block:: elisp
 
-  (defun mantra-key-sequences-parser-start (_key-seq)
+  (defun my-key-sequences-parser-start (_key-seq)
     "Start parsing on any key sequence."
     t)
 
-  (defun mantra-key-sequences-parser-stop (_key-seq _state)
+  (defun my-key-sequences-parser-stop (_key-seq _state)
     "Stop parsing (i.e., accept) after any key sequence."
     t)
 
-  (defvar mantra-key-sequences-parser
-    (mantra-make-parser "mantra-key-sequences"
-                        #'mantra-key-sequences-parser-start
-                        #'mantra-key-sequences-parser-stop)
+  (defvar my-key-sequences-parser
+    (mantra-make-parser "my-key-sequences"
+                        #'my-key-sequences-parser-start
+                        #'my-key-sequences-parser-stop)
     "A parser to recognize all key sequences.")
 
-The first argument, ``"mantra-key-sequences"``, is the name of the parser. Whenever the parser recognizes any input, it will publish its parsed output to the pub/sub system using its name as the topic for publication.
+The first argument, ``"my-key-sequences"``, is the name of the parser. Whenever the parser recognizes any input, it will publish its parsed output to a shared (dynamic) pub/sub system, using this name as the topic for publication.
 
 The following two function arguments are the stop and abort conditions for the parser. We use named functions instead of lambdas (which would also work) for reasons that will be explained soon.
 
-The first lambda is the predicate for starting parsing. In this case, it always returns true, so this parser starts parsing at the start of each command. The next lambda is the predicate to decide when to stop parsing and accept a result. Since this, too, always returns true, it will always end parsing after each key sequence that matches a command has been entered.
+The first lambda is the predicate for starting parsing. In this case, it always returns true, so this parser starts parsing at the start of each command. The next lambda is the predicate to decide when to stop parsing and accept a result. Since this, too, always returns true, it will always end parsing after each key sequence has been entered.
 
-In other words, this parser will simply record every key sequence that matches a command.
+In other words, this parser will simply publish every key sequence entered.
 
 But the parser can't do anything until it is given input!
 
@@ -77,11 +79,11 @@ We could manually feed the parser input using ``mantra-parse`` and then have it 
 
   (mantra-connect)
 
-2. Our parser (in this case, ``mantra-key-sequences-parser``) must be registered with Mantra so that it forwards received input to it.
+2. Our parser (in this case, ``my-key-sequences-parser``) must be subscribed to these key sequences, which Mantra publishes on a generic pub/sub system, under the topic `"mantra-key-sequences"`.
 
 .. code-block:: elisp
 
-  (mantra-register mantra-key-sequences-parser)
+  (mantra-subscribe "mantra-key-sequences" my-key-sequences-parser)
 
 Now, Mantra is listening on the Emacs command loop, and it is forwarding all key sequences to our parser. 😎
 
@@ -92,12 +94,12 @@ Okay, but the main thing you are probably interested in is to actually *do somet
 
 .. code-block:: elisp
 
-  (pubsub-subscribe "mantra-key-sequences"
+  (pubsub-subscribe "my-key-sequences"
                     "my-subscriber"
                     (lambda (parsed-keys)
                       (print (key-description parsed-keys))))
 
-You could also use ``(mantra-parser-name mantra-key-sequences-parser)`` as the topic (first argument) to be extra cautious, but we use the parser's name directly here for simplicity.
+You could also use ``(mantra-parser-name my-key-sequences-parser)`` as the topic (first argument) to be extra cautious, but we use the parser's name directly here for simplicity.
 
 Switch to the ``*Messages*`` buffer to see the printed output.
 
@@ -108,6 +110,8 @@ To unsubscribe your printer from the parser:
   (pubsub-unsubscribe "mantra-key-sequences"
                       "my-subscriber")
 
+Obviously, this isn't a very useful parser. You can customize the parsing to your specific needs by modifying the ``start``, ``stop``, and ``abort`` conditions, and by using the ``map`` and ``compose`` arguments to the parser, which allow you to define the nature of the parsed result.
+
 Debugging
 ~~~~~~~~~
 
@@ -115,7 +119,7 @@ If a parser isn't behaving as expected, it can be useful to attach debug logs to
 
 Since each parsing stage (i.e., *start*, *stop*, and *abort*) is fulfilled by a function, you can simply use Emacs's built-in way to augment function behavior --- *advice* --- to implement the desired debugging!
 
-As always, with advice in Emacs, it's necessary for the parsing functions to be *named functions* rather than anonymous lambdas, and this is why we avoid lambdas in the definition of ``mantra-key-sequences-parser`` that we saw earlier. Let's look at how we might use advice to implement debug logs, continuing with our earlier example.
+As always, with advice in Emacs, it's necessary for the parsing functions to be *named functions* rather than anonymous lambdas, and this is why we avoid lambdas in the definition of ``my-key-sequences-parser`` that we saw earlier. Let's look at how we might use advice to implement debug logs, continuing with our earlier example.
 
 Now, remember that you can use any advice functions you like, but Mantra provides some simple ones that are broadly useful to trace parsing, so we'll use those here.
 
@@ -123,26 +127,26 @@ Now, remember that you can use any advice functions you like, but Mantra provide
 
   (require 'mantra-debug)
 
-  (advice-add #'mantra-key-sequences-parser-start
+  (advice-add #'my-key-sequences-parser-start
               :around #'mantra-debug-parser-start)
 
-  (advice-add #'mantra-key-sequences-parser-stop
+  (advice-add #'my-key-sequences-parser-stop
               :around #'mantra-debug-parser-stop)
 
-  (advice-add #'mantra-key-sequences-parser-abort
+  (advice-add #'my-key-sequences-parser-abort
               :around #'mantra-debug-parser-abort)
 
 Now, open the ``*Messages*`` buffer in a window alongside any buffer where you are doing things, and you should see the debug trace logs appear there for each stage of parsing using the basic parser. When you're satisfied, remove the debugging advice:
 
 .. code-block:: elisp
 
-  (advice-remove #'mantra-key-sequences-parser-start
+  (advice-remove #'my-key-sequences-parser-start
                  #'mantra-debug-parser-start)
 
-  (advice-remove #'mantra-key-sequences-parser-stop
+  (advice-remove #'my-key-sequences-parser-stop
                  #'mantra-debug-parser-stop)
 
-  (advice-remove #'mantra-key-sequences-parser-abort
+  (advice-remove #'my-key-sequences-parser-abort
                  #'mantra-debug-parser-abort)
 
 As advice is a general way to augment function behavior, you can use this approach to do anything you like in connection with the parsing stages of any particular parser. For instance, you could add additional or alternative conditions for each stage. But this is generally not advisable (so to speak), and it would likely be better to simply write a new parser with the desired functionality rather than override an existing one using advice. Still, knowing this could be useful, as it means parsers used with Mantra are inherently extensible using advice in the same way that Emacs functions are, and with the same caveats.
@@ -162,19 +166,24 @@ After fixing the problem, you can reinstate mantra listening on the command loop
 
   (mantra-connect)
 
+Using Other Input Sources
+-------------------------
+
+The example parser above parses key sequences entered on the Emacs command loop. But note that it does so via subscription to a topic on a generic pub/sub system. Indeed, parsers may receive input from *any* source as long as they call ``mantra-parse`` and ``mantra-parse-finish`` (or simply ``mantra-feed-parser`` in the most common cases) on your parser, and using the pub/sub backend as an intermediary for the purpose is especially convenient.
+
 Higher Level Parsers
 --------------------
 
-Parsers of the kind we defined above are *primitive* parsers operating directly on key sequences entered on the Emacs command loop. But you may wish to parse richer structure using the results of these lower-level parsers. ``mantra-subscribe`` allows you to describe such pairwise subscription relationships amongst parsers, abstracting the details of feeding the output of one parser as input to the next. You can ``mantra-unsubscribe`` when you're done.
+As parsers may receive input from any source (typically via pub/sub), in particular, they may receive input from *other parsers*. This is useful if you wish to parse richer structure using the results of lower-level parsers (such as the key sequence parser we wrote above). ``mantra-subscribe`` allows you to describe such pairwise subscription relationships amongst parsers, abstracting the details of feeding the output of one parser as input to the next. You can ``mantra-unsubscribe`` when you're done.
 
 How It Works
 ------------
 
-Mantra allows you to define "regex"-like patterns on your keyboard activity in terms of start, stop, and abort conditions, together with parsers that transform this keyboard activity (within the context of the surrounding Emacs environment) into arbitrary structured data.
+Mantra allows you to define "regex"-like patterns on any input data --- for instance, your own keyboard activity --- in terms of start, stop, and abort conditions, together with parsers that transform this keyboard activity (within the context of the surrounding Emacs environment) into arbitrary structured data.
 
 The pattern conditions could be anything, not only based on the key sequence typed. Likewise, the parsers are defined in terms of mapping and composing parsed key sequences within the context of the full surrounding Emacs environment at each step, so that the parsed result could also be just about anything in the context of your activity.
 
-Whenever one of the defined patterns is encountered, the corresponding parser records the structured data (by default, simply the matching sequence of keystrokes) and publishes it using a basic pub/sub system for additional handling by any subscribers you define. Higher levels of parsing (e.g., "record either buffer or window configuration changes, and only when I'm in such-and-such project path") may be achieved by subscribing to these primitive parsers and publishing fresh events if the desired conditions over these primitive parsers are met.
+Whenever one of the defined patterns is encountered, the corresponding parser records the structured data (in the earlier example, simply the matching sequence of keystrokes) and publishes it using a basic pub/sub system for additional handling by any subscribers you define. Higher levels of parsing (e.g., "record either buffer or window configuration changes, and only when I'm in such-and-such project path") may be achieved by subscribing to these primitive parsers and publishing fresh events if the desired conditions over these primitive parsers are met.
 
 Mantra is purely syntax, without semantics. It does not bind key sequences to commands or even know what commands parsed sequences may be bound to. The patterns and parsers are defined by you and may be associated with any actions that you see fit to perform, independently of any configured keybindings for these key sequences.
 
