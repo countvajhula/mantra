@@ -23,9 +23,6 @@
 
 ;;; Code:
 
-;; (key-description [3 108])
-;; kbd
-
 (require 'pubsub)
 
 (defconst mantra--index-name 0
@@ -163,15 +160,43 @@ parsing."
             ;; initialize to null state
             (funcall map (vector)))))
 
-(defconst mantra-key-sequences-topic
-  "mantra-key-sequences"
+(defconst mantra-key-sequences-pre-command-topic
+  "mantra-key-sequences-pre-command"
   "The topic under which elementary key sequences will be published.
+
+This is the topic for key sequences that are published *before* the
+associated command is executed.
 
 Publishing key sequences read on the Emacs command loop is provided as
 a convenience, as this may be a common input source and it is useful
 to parse it using the standard pub/sub paradigm. It is only relevant
 if `mantra-connect' has been called, i.e., when clients are interested
 in parsing key sequences.")
+
+(defconst mantra-key-sequences-topic
+  "mantra-key-sequences"
+  "The topic under which elementary key sequences will be published.
+
+This is the topic for key sequences that are published *after* the
+associated command is executed.
+
+Publishing key sequences read on the Emacs command loop is provided as
+a convenience, as this may be a common input source and it is useful
+to parse it using the standard pub/sub paradigm. It is only relevant
+if `mantra-connect' has been called, i.e., when clients are interested
+in parsing key sequences.")
+
+(defun mantra-pre-command-listener ()
+  "Listen for the key sequences on the Emacs command loop.
+
+Publish the newly entered key sequence KEY-SEQ on pub/sub.
+
+This does some basic \"lexing\" of the key sequence, discarding rather
+than forwarding empty sequences."
+  (let ((key-seq (this-command-keys-vector)))
+    (when (and key-seq (not (seq-empty-p key-seq)))
+      (pubsub-publish mantra-key-sequences-pre-command-topic
+                      key-seq))))
 
 (defun mantra-post-command-listener ()
   "Listen for the key sequences on the Emacs command loop.
@@ -190,10 +215,12 @@ than forwarding empty sequences."
 
 Key sequences are published at the granularity of when they match a
 command."
+  (add-hook 'pre-command-hook #'mantra-pre-command-listener)
   (add-hook 'post-command-hook #'mantra-post-command-listener))
 
 (defun mantra-disconnect ()
   "Stop publishing key sequences read on the Emacs command loop."
+  (remove-hook 'pre-command-hook #'mantra-pre-command-listener)
   (remove-hook 'post-command-hook #'mantra-post-command-listener))
 
 (defun mantra-subscribe (topic subscriber)
