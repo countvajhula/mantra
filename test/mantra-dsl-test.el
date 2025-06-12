@@ -60,6 +60,14 @@
         (setq result (buffer-string)))
     (erase-buffer)))
 
+(defun fixture-nonempty-buffer (body)
+  (unwind-protect
+      (progn
+        (insert "hello")
+        (funcall body)
+        (setq result (buffer-string)))
+    (erase-buffer)))
+
 ;;
 ;; Tests
 ;;
@@ -81,7 +89,7 @@
 (ert-deftest key-test ()
   (let ((result))
     (with-fixture fixture-empty-buffer
-                  (mantra-eval '(key "a")))
+      (mantra-eval '(key "a")))
     (should
      (equal "a"
             result)))
@@ -104,6 +112,15 @@
       (mantra-eval '(insertion "hello C-c C-v M-f there")))
     (should
      (equal "hello C-c C-v M-f there"
+            result))))
+
+(ert-deftest deletion-test ()
+  (let ((result))
+    (with-fixture fixture-nonempty-buffer
+      (goto-char 2)
+      (mantra-eval '(deletion 3)))
+    (should
+     (equal "ho"
             result))))
 
 (ert-deftest fallback-test ()

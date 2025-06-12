@@ -127,13 +127,29 @@ execution."
           (nth 0 obj))
     (error nil)))
 
+(defun mantra-make-deletion (count)
+  "A primitive operation to delete COUNT characters from a buffer."
+  `(deletion ,count))
+
+(defun mantra--deletion-count (deletion)
+  "The number of characters to delete in DELETION."
+  (cadr deletion))
+
+(defun mantra-deletion-p (obj)
+  "Check if OBJ specifies a deletion."
+  (condition-case nil
+      (eq 'deletion
+          (nth 0 obj))
+    (error nil)))
+
 (defun mantra-p (obj)
   "Check if OBJ specifies a mantra."
   (or (vectorp obj)
       (mantra-key-p obj)
       (mantra-seq-p obj)
       (mantra-repetition-p obj)
-      (mantra-insertion-p obj)))
+      (mantra-insertion-p obj)
+      (mantra-deletion-p obj)))
 
 (defconst mantra--null (vector)
   "The null mantra.")
@@ -199,10 +215,16 @@ rather, a singleton list containing the key."
          (result (or result
                      (funcall (mantra--computation-map computation)
                               mantra--null)))
-         (recited-mantra (condition-case nil
-                             (progn (execute-kbd-macro key-vector)
-                                    t)
-                           (error nil))))
+         (recited-mantra (or (equal mantra--null key-vector)
+                             ;; executing a keyboard macro
+                             ;; changes the active buffer when
+                             ;; running tests, from *temp* to *scratch*
+                             ;; so we avoid doing it for null key sequence
+                             ;; just to make things easier there
+                             (condition-case nil
+                                 (progn (execute-kbd-macro key-vector)
+                                        t)
+                               (error nil)))))
     (when recited-mantra
       (mantra-compose-computation result
                                   (funcall (mantra--computation-map computation)
@@ -276,6 +298,19 @@ Like key vectors, this is a primitive operation of the Mantra DSL."
     (insert text)
     result))
 
+(defun mantra-eval-deletion (deletion &optional computation result)
+  "Evaluate DELETION.
+
+An deletion when evaluated deletes text from the buffer.
+
+Like key vectors, this is a primitive operation of the Mantra DSL."
+  (let ((count (mantra--deletion-count deletion))
+        (result (or result
+                    (funcall (mantra--computation-map computation)
+                             mantra--null))))
+    (delete-char count)
+    result))
+
 (defun mantra--eval (mantra computation result)
   "Helper to evaluate MANTRA.
 
@@ -300,6 +335,10 @@ See `mantra-eval-move' for more on COMPUTATION and RESULT."
          (mantra-eval-insertion mantra
                                 computation
                                 result))
+        ((mantra-deletion-p mantra)
+         (mantra-eval-deletion mantra
+                               computation
+                               result))
         ;; fall back to a lambda. It must still accept
         ;; the same arguments as any mantra, so that
         ;; it could in principle produce a valid result
