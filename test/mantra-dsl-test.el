@@ -117,8 +117,8 @@
 (ert-deftest deletion-test ()
   (let ((result))
     (with-fixture fixture-nonempty-buffer
-      (goto-char 2)
-      (mantra-eval '(deletion 3)))
+      (goto-char 4)
+      (mantra-eval '(deletion -2 3)))
     (should
      (equal "ho"
             result))))

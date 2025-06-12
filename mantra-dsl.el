@@ -135,13 +135,17 @@ execution."
           (nth 0 obj))
     (error nil)))
 
-(defun mantra-make-deletion (count)
-  "A primitive operation to delete COUNT characters from a buffer."
-  `(deletion ,count))
+(defun mantra-make-deletion (start count)
+  "A primitive operation to delete COUNT characters from a buffer from position START."
+  `(deletion ,start ,count))
+
+(defun mantra--deletion-start (deletion)
+  "The start position for DELETION."
+  (cadr deletion))
 
 (defun mantra--deletion-count (deletion)
   "The number of characters to delete in DELETION."
-  (cadr deletion))
+  (caddr deletion))
 
 (defun mantra-deletion-p (obj)
   "Check if OBJ specifies a deletion."
@@ -312,11 +316,14 @@ Like key vectors, this is a primitive operation of the Mantra DSL."
 An deletion when evaluated deletes text from the buffer.
 
 Like key vectors, this is a primitive operation of the Mantra DSL."
-  (let ((count (mantra--deletion-count deletion))
-        (result (or result
-                    (funcall (mantra--computation-map computation)
-                             mantra--null))))
-    (delete-char count)
+  (let* ((current-position (point))
+         (start (+ current-position (mantra--deletion-start deletion)))
+         (count (mantra--deletion-count deletion))
+         (end (+ start count))
+         (result (or result
+                     (funcall (mantra--computation-map computation)
+                              mantra--null))))
+    (delete-region start end)
     result))
 
 (defun mantra--eval (mantra computation result)
