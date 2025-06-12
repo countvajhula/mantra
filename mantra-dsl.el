@@ -40,6 +40,8 @@
           (nth 0 obj))
     (error nil)))
 
+;; TODO: would it be simpler to use list syntax
+;; so it's not a list of phases but the phases themselves?
 (defun mantra-make-seq (&rest mantras)
   "Construct a sequence of mantras."
   `(seq ,mantras))
@@ -69,6 +71,12 @@ Each phase could be any mantra."
 (defun mantra--seq-null-p (seq)
   "Check if SEQ is empty or null."
   (null (mantra--seq-phases seq)))
+
+(defun mantra-seq-compose (s1 s2)
+  "Append S1 and S2."
+  (let ((s1-phases (mantra--seq-phases s1))
+        (s2-phases (mantra--seq-phases s2)))
+    (apply #'mantra-make-seq (append s1-phases s2-phases))))
 
 (defun mantra-make-repetition (mantra &optional times)
   "A specification to repeat a MANTRA TIMES times.

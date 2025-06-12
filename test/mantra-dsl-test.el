@@ -148,6 +148,14 @@
                             (insert "bc"))))))
     (should
      (equal "abc"
+            result)))
+  ;; composition of sequences appends phases
+  (let ((result (mantra-seq-compose '(seq ([]
+                                           (key "a")))
+                                    '(seq ([98]
+                                           [99])))))
+    (should
+     (equal '(seq ([] (key "a") [98] [99]))
             result))))
 
 (ert-deftest mantra-eval-test ()
