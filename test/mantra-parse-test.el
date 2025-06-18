@@ -264,6 +264,16 @@
   (with-fixture fixture-parser-nondefault-state
     (should (equal "abc" (mantra-parser-state parser))))
 
+  ;; initial value of nil may be provided via mantra-initial-value
+  (let ((parser (mantra-make-parser "nil-parser"
+                                    nil
+                                    nil
+                                    nil
+                                    nil
+                                    nil
+                                    (mantra-initial-value nil))))
+    (should (equal nil (mantra-parser-init parser))))
+
   ;; mantra-parser-map
   (with-fixture fixture-parser-basic
     ;; defaults to identity function

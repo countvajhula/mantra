@@ -102,6 +102,21 @@ creation time (see `mantra-make-parser')."
   (mantra-parser-set-state parser
                            (mantra-parser-init parser)))
 
+(defun mantra-initial-value (value)
+  "Wrapper for an initial VALUE that could be `nil'."
+  (list 'mantra-initial-value value))
+
+(defun mantra-initial-value-p (value)
+  "Is VALUE a `mantra-initial-value'?"
+  (and (listp value)
+       (not (null value))
+       (eq 'mantra-initial-value
+           (car value))))
+
+(defun mantra-initial-value-value (value)
+  "The value contained in VALUE."
+  (cadr value))
+
 (defun mantra-make-parser (name
                            start
                            stop
@@ -156,7 +171,13 @@ parsing."
   (let* ((abort (or abort (lambda (_input _state) nil)))
          (map (or map #'identity))
          (compose (or compose #'vconcat))
-         (state (or init (funcall map (vector)))))
+         (state (if init
+                    (if (mantra-initial-value-p init)
+                        ;; for the special case where
+                        ;; nil is the desired init value
+                        (mantra-initial-value-value init)
+                      init)
+                    (funcall map (vector)))))
     (vector name
             start
             stop
