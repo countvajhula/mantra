@@ -89,13 +89,13 @@
 (ert-deftest key-test ()
   (let ((result))
     (with-fixture fixture-empty-buffer
-      (mantra-eval '(key "a")))
+      (mantra-eval "a"))
     (should
      (equal "a"
             result)))
   (let ((result))
     (with-fixture fixture-empty-buffer
-      (mantra-eval '(key "abc M-b M-c")))
+      (mantra-eval "abc M-b M-c"))
     (should
      (equal "Abc"
             result))))
@@ -135,7 +135,7 @@
 (ert-deftest repetition-test ()
   (let ((result))
     (with-fixture fixture-empty-buffer
-      (mantra-eval '(repetition (key "a") 3)))
+      (mantra-eval '(repetition "a" 3)))
     (should
      (equal "aaa"
             result))))
@@ -143,7 +143,7 @@
 (ert-deftest seq-test ()
   (let ((result))
     (with-fixture fixture-empty-buffer
-      (mantra-eval '(seq ((key "a")
+      (mantra-eval '(seq ("a"
                           (lambda (&rest args)
                             (insert "bc"))))))
     (should
@@ -151,18 +151,18 @@
             result)))
   ;; composition of sequences appends phases
   (let ((result (mantra-seq-compose '(seq ([]
-                                           (key "a")))
+                                           "a"))
                                     '(seq ([98]
                                            [99])))))
     (should
-     (equal '(seq ([] (key "a") [98] [99]))
+     (equal '(seq ([] "a" [98] [99]))
             result))))
 
 (ert-deftest mantra-eval-test ()
   (let ((result))
     (with-fixture fixture-empty-buffer
-      (mantra-eval '(seq ((repetition (key "a") 3)
-                          (key "b")
+      (mantra-eval '(seq ((repetition "a" 3)
+                          "b"
                           (insertion "c")
                           (lambda (&rest args)
                             (insert "def"))))))
@@ -173,8 +173,8 @@
   ;; using a nondefault computation doesn't change the behavior
   (let ((result))
     (with-fixture fixture-empty-buffer
-      (mantra-eval '(seq ((repetition (key "a") 3)
-                          (key "b")
+      (mantra-eval '(seq ((repetition "a" 3)
+                          "b"
                           (insertion "c")
                           (lambda (&rest args)
                             (insert "def"))))
@@ -187,8 +187,8 @@
   ;; computation computes expected result
   (with-fixture fixture-empty-buffer
     (let ((result
-           (mantra-eval '(seq ((repetition (key "a") 3)
-                               (key "b")
+           (mantra-eval '(seq ((repetition "a" 3)
+                               "b"
                                (insertion "c")
                                (lambda (computation result)
                                  (insert "def")

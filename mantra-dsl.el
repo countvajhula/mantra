@@ -25,21 +25,6 @@
 
 (require 'cl-lib)
 
-(defun mantra-make-key (key)
-  "A primitive KEY sequence."
-  `(key ,key))
-
-(defun mantra--key-key (key)
-  "The underlying key sequence in KEY."
-  (cadr key))
-
-(defun mantra-key-p (obj)
-  "Check if OBJ specifies a key sequence."
-  (condition-case nil
-      (eq 'key
-          (nth 0 obj))
-    (error nil)))
-
 ;; TODO: would it be simpler to use list syntax
 ;; so it's not a list of phases but the phases themselves?
 (defun mantra-make-seq (&rest mantras)
@@ -157,7 +142,7 @@ execution."
 (defun mantra-p (obj)
   "Check if OBJ specifies a mantra."
   (or (vectorp obj)
-      (mantra-key-p obj)
+      (stringp obj)
       (mantra-seq-p obj)
       (mantra-repetition-p obj)
       (mantra-insertion-p obj)
@@ -249,11 +234,10 @@ rather, a singleton list containing the key."
 A KEY is a string representation of a key sequence. It is translated
 in a straightforward way to the primitive key vector representation to
 be evaluated."
-  (let ((key-string (mantra--key-key key)))
-    (mantra-eval-key-vector (string-to-vector
-                             (kbd key-string))
-                            computation
-                            result)))
+  (mantra-eval-key-vector (string-to-vector
+                           (kbd key))
+                          computation
+                          result))
 
 (defun mantra-eval-seq (seq computation result)
   "Execute a SEQ.
@@ -338,14 +322,6 @@ See `mantra-eval-move' for more on COMPUTATION and RESULT."
          (mantra-eval-seq mantra
                           computation
                           result))
-        ((mantra-key-p mantra)
-         (mantra-eval-key mantra
-                          computation
-                          result))
-        ((vectorp mantra)
-         (mantra-eval-key-vector mantra
-                                 computation
-                                 result))
         ((mantra-insertion-p mantra)
          (mantra-eval-insertion mantra
                                 computation
@@ -354,6 +330,14 @@ See `mantra-eval-move' for more on COMPUTATION and RESULT."
          (mantra-eval-deletion mantra
                                computation
                                result))
+        ((stringp mantra)
+         (mantra-eval-key mantra
+                          computation
+                          result))
+        ((vectorp mantra)
+         (mantra-eval-key-vector mantra
+                                 computation
+                                 result))
         ;; fall back to a lambda. It must still accept
         ;; the same arguments as any mantra, so that
         ;; it could in principle produce a valid result
