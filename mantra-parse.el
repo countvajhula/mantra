@@ -49,6 +49,9 @@
 (defconst mantra--index-init 7
   "The index of the initial state of a parser.")
 
+(defconst mantra--index-finish 8
+  "The index of the finishing function of a parser.")
+
 (defun mantra-parser-name (parser)
   "The name of the PARSER."
   (seq-elt parser mantra--index-name))
@@ -77,6 +80,10 @@ arguments, where the first is the accumulated parser state and the
 second is the result of applying the \"map\" function to the fresh key
 sequence."
   (seq-elt parser mantra--index-compose))
+
+(defun mantra-parser-finish (parser)
+  "Get finishing function for PARSER."
+  (seq-elt parser mantra--index-finish))
 
 (defun mantra-parser-init (parser)
   "The null parsing state inferred for the current PARSER.
@@ -124,7 +131,8 @@ creation time (see `mantra-make-parser')."
                            abort
                            map
                            compose
-                           init)
+                           init
+                           finish)
   "Make a parser for keyboard activity.
 
 A parser is a set of criteria for recognizing key sequences, in the
@@ -166,8 +174,9 @@ applied to the empty vector to derive a default initial STATE. The
 resulting parse with these default values is a single key sequence
 vector capturing the entire parsed stream.
 
-The state at the time of acceptance is published as the result of
-parsing."
+FINISH must be a function of one argument (defaults to `identity'). It
+will be called with the state at the time of acceptance, and the
+result is published as the result of parsing."
   (let* ((abort (or abort (lambda (_input _state) nil)))
          (map (or map #'identity))
          (compose (or compose #'vconcat))
@@ -177,7 +186,8 @@ parsing."
                         ;; nil is the desired init value
                         (mantra-initial-value-value init)
                       init)
-                    (funcall map (vector)))))
+                    (funcall map (vector))))
+         (finish (or finish #'identity)))
     (vector name
             start
             stop
@@ -188,7 +198,8 @@ parsing."
             state
             ;; store the initial state so that when reset, the parser's
             ;; state returns to this initial value
-            state)))
+            state
+            finish)))
 
 (defconst mantra-key-sequences-pre-command-topic
   "mantra-key-sequences-pre-command"
@@ -269,8 +280,8 @@ proper way (as we do here)."
   (pubsub-subscribe topic
                     (mantra-parser-name subscriber)
                     (lambda (input)
-                      (mantra-feed-parser subscriber
-                                          input))))
+                      (mantra-feed-and-parse subscriber
+                                             input))))
 
 (defun mantra-unsubscribe (topic subscriber)
   "Unsubscribe SUBSCRIBER from TOPIC.
@@ -285,7 +296,7 @@ SUBSCRIBER is expected to be a parser, and TOPIC, a string."
   (not (equal (mantra-parser-init parser)
               (mantra-parser-state parser))))
 
-(defun mantra-parse (parser input)
+(defun mantra-feed-parser (parser input)
   "Parse INPUT using PARSER.
 
 If PARSER is already parsing (i.e., it already has state), then append
@@ -296,7 +307,7 @@ Otherwise, do nothing.
 If parsing is in progress, either prior to or as a result of the
 present invocation, then also check the abort condition for the parser
 to see if parsing should be aborted. This is done at this stage before
-the actual command is executed (i.e., not in `mantra-parse-finish'
+the actual command is executed (i.e., not in `mantra-parse'
 like checking the accept predicate) to support avoiding an infinite
 loop in some self-referential cases like repeating the last command.
 
@@ -311,7 +322,7 @@ the entire parsed state in PARSER, not just the current key sequence."
                                       (mantra-parser-state parser)
                                       (funcall (mantra-parser-map parser)
                                                input)))
-    ;; The accept predicate is checked in `mantra-parse-finish', at
+    ;; The accept predicate is checked in `mantra-parse', at
     ;; which point state already includes input. For consistency in
     ;; the interface, we check the abort predicate here *after*
     ;; incorporating input into state.
@@ -323,18 +334,21 @@ the entire parsed state in PARSER, not just the current key sequence."
 (defun mantra-accept (parser)
   "Accept the current state in PARSER.
 
-This publishes the parsed key sequence under the topic with PARSER's
-name.  Note that as the pub/sub system is not persistent, it does not
-store any parsed key sequences after notifying subscribers of them.
+This publishes the parsed result under the topic with PARSER's name,
+after \"finishing\" it in the way specified by the parser (typically
+to produce the parsed result as is). Note that as the pub/sub system
+is not persistent, it does not store any parsed key sequences after
+notifying subscribers of them.
 
 After publishing the match, this clears the parser state."
   (let ((name (mantra-parser-name parser))
-        (state (mantra-parser-state parser)))
-    (pubsub-publish name state)
+        (state (mantra-parser-state parser))
+        (finish (mantra-parser-finish parser)))
+    (pubsub-publish name (funcall finish state))
     ;; clear state
     (mantra-parser-clear-state parser)))
 
-(defun mantra-parse-finish (parser input)
+(defun mantra-parse (parser input)
   "Accept PARSER state or continue parsing.
 
 INPUT is the current key sequence.  Aborting or accepting is based on
@@ -350,10 +364,10 @@ continue parsing."
                       (mantra-parser-state parser)))
     (mantra-accept parser)))
 
-(defun mantra-feed-parser (parser input)
+(defun mantra-feed-and-parse (parser input)
   "Feed INPUT to PARSER.
 
-Typically, the `parse' and `parse-finish' stages are done together
+Typically, the `feed-parser' and `parse' stages are done together
 rather than at separate times, so this function that does both may be
 used, as a convenience.
 
@@ -363,16 +377,16 @@ cases where perhaps greedy matching may not be desirable.
 
 For instance, if anything starting with \"h\" and ending with \"ello\"
 happens to be a valid parse for some language, and if we provide the
-input \"hellohairyello\" incrementally, `mantra-feed-parser' would
+input \"hellohairyello\" incrementally, `mantra-feed-and-parse' would
 accept \"hello\" and \"hairyello\", but using the interfaces
 separately allows us to parse either this result, or even the entire
 input, as a valid expression.
 
 Although I'm not aware of a current use for it, it doesn't hurt to
-separately provide `parse' and `parse-finish', and it also makes
+separately provide `feed-parser' and `parse', and it also makes
 these stages easier to test."
-  (mantra-parse parser input)
-  (mantra-parse-finish parser input))
+  (mantra-feed-parser parser input)
+  (mantra-parse parser input))
 
 
 (provide 'mantra-parse)

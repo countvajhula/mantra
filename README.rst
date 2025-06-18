@@ -71,7 +71,7 @@ But the parser can't do anything until it is given input!
 Feeding Input to the Parser
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-We could manually feed the parser input using ``mantra-parse`` and then have it evaluate the accumulated input using ``mantra-parse-finish``, but a typical use we'd have for such a parser is for it to parse our own keyboard activity in Emacs *implicitly*. To do this, two things are needed:
+We could manually feed the parser input using ``mantra-feed-parser`` and then have it evaluate the accumulated input using ``mantra-parse``, but a typical use we'd have for such a parser is for it to parse our own keyboard activity in Emacs *implicitly*. To do this, two things are needed:
 
 1. Mantra must be connected to the `Emacs command loop <https://www.gnu.org/software/emacs/manual/html_node/elisp/Command-Overview.html>`_ so that it is notified of all input key sequences. To do this:
 
@@ -177,7 +177,7 @@ If you have unsound accept and abort conditions that may allow the possibility o
 Using Other Input Sources
 -------------------------
 
-The example parser above parses key sequences entered on the Emacs command loop. But note that it does so via subscription to a topic on a generic pub/sub system. Indeed, parsers may receive input from *any* source as long as they call ``mantra-parse`` and ``mantra-parse-finish`` (or simply ``mantra-feed-parser`` in the most common cases) on your parser, and using the pub/sub backend as an intermediary for the purpose is especially convenient.
+The example parser above parses key sequences entered on the Emacs command loop. But note that it does so via subscription to a topic on a generic pub/sub system. Indeed, parsers may receive input from *any* source as long as they call ``mantra-feed-parser`` and ``mantra-parse`` (or simply ``mantra-feed-and-parse`` in the most common cases) on your parser, and using the pub/sub backend as an intermediary for the purpose is especially convenient.
 
 Higher Level Parsers
 --------------------

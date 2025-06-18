@@ -145,6 +145,22 @@
       ;; perhaps aid garbage collection
       (setq parser nil))))
 
+;; parser with nondefault finish
+(defun fixture-parser-nondefault-finish (body)
+  (let ((parser nil))
+    (unwind-protect
+        (progn (setq parser (mantra-make-parser fixture-parser-nondefault-name
+                                                nil
+                                                nil
+                                                nil
+                                                nil
+                                                nil
+                                                nil
+                                                (lambda (_state) "hello")))
+               (funcall body))
+      ;; perhaps aid garbage collection
+      (setq parser nil))))
+
 (defvar fixture-single-key [108]
   "A sequence representing a single key press (the letter l).")
 
@@ -327,38 +343,38 @@
   (with-fixture fixture-nondefault-state-parser-with-state
     (should (mantra-parsing-in-progress-p parser))))
 
-(ert-deftest mantra-parse-test ()
+(ert-deftest mantra-feed-parser-test ()
   (with-fixture fixture-parser-accept-none
-    (mantra-parse parser
-                  fixture-single-key)
+    (mantra-feed-parser parser
+                        fixture-single-key)
     (should-not (mantra-parsing-in-progress-p parser)))
   (with-fixture fixture-parser-accept-all
     ;; parsing not already in progress but start condition passes
-    (mantra-parse parser
-                  fixture-single-key)
+    (mantra-feed-parser parser
+                        fixture-single-key)
     (should (mantra-parsing-in-progress-p parser)))
   (with-fixture fixture-parser-with-state
     ;; parsing already in progress AND start condition passes
-    (mantra-parse parser
-                  fixture-single-key)
+    (mantra-feed-parser parser
+                        fixture-single-key)
     (should (mantra-parsing-in-progress-p parser)))
   (with-fixture fixture-parser-accept-none
     ;; condition to start parsing fails BUT parsing already in progress
     (mantra-parser-set-state parser fixture-single-key)
-    (mantra-parse parser
-                  fixture-single-key)
+    (mantra-feed-parser parser
+                        fixture-single-key)
     (should (mantra-parsing-in-progress-p parser)))
   (with-fixture fixture-parser-nondefault
     ;; values are mapped and composed with state
     (mantra-parser-set-state parser "a b c ")
-    (mantra-parse parser
-                  [100 101 102])
+    (mantra-feed-parser parser
+                        [100 101 102])
     (should (equal "a b c d e f"
                    (mantra-parser-state parser))))
   (with-fixture fixture-abort-parser-with-state
-                (mantra-parse parser
-                              fixture-single-key)
-                (should-not (mantra-parsing-in-progress-p parser))))
+    (mantra-feed-parser parser
+                        fixture-single-key)
+    (should-not (mantra-parsing-in-progress-p parser))))
 
 (ert-deftest mantra-accept-test ()
   (with-fixture fixture-parser-with-state
@@ -370,19 +386,25 @@
   (with-fixture fixture-parser-with-state
     ;; clears state
     (mantra-accept parser)
-    (should-not (mantra-parsing-in-progress-p parser))))
+    (should-not (mantra-parsing-in-progress-p parser)))
 
-(ert-deftest mantra-parse-finish-test ()
+  ;; produces finished parsing state
+  (with-fixture fixture-parser-nondefault-finish
+    (with-fixture fixture-subscriber
+      (mantra-accept parser)
+      (should (equal "hello" result)))))
+
+(ert-deftest mantra-parse-test ()
   ;; does not accept if parsing is not in progress
   (with-fixture fixture-parser-accept-all
     (with-fixture fixture-subscriber
-      (mantra-parse-finish parser fixture-single-key)
+      (mantra-parse parser fixture-single-key)
       (should-not (equal fixture-single-key
                          result))))
   ;; accepts if parsing is in progress
   (with-fixture fixture-parser-with-state
     (with-fixture fixture-subscriber
-      (mantra-parse-finish parser fixture-single-key)
+      (mantra-parse parser fixture-single-key)
       (should (equal fixture-single-key
                      result))
       (should-not (mantra-parsing-in-progress-p parser)))))
@@ -391,7 +413,7 @@
   ;; subscriber receives parsed tokens
   (with-fixture fixture-multi-level-parsers
     (let ((result nil))
-      (mantra-parse-finish parser fixture-single-key)
+      (mantra-parse parser fixture-single-key)
       (should (equal '((my-parser []) (my-parser [108]))
                      result))))
   ;; subscriber stops receiving parsed tokens upon unsubscribing
@@ -399,5 +421,5 @@
     (let ((result nil))
       (mantra-unsubscribe (mantra-parser-name parser)
                           my-parser)
-      (mantra-parse-finish parser fixture-single-key)
+      (mantra-parse parser fixture-single-key)
       (should-not result))))
