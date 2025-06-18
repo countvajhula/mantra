@@ -46,6 +46,9 @@
 (defconst mantra--index-state 6
   "The index of the state variable in a parser.")
 
+(defconst mantra--index-init 7
+  "The index of the initial state of a parser.")
+
 (defun mantra-parser-name (parser)
   "The name of the PARSER."
   (seq-elt parser mantra--index-name))
@@ -75,17 +78,16 @@ second is the result of applying the \"map\" function to the fresh key
 sequence."
   (seq-elt parser mantra--index-compose))
 
-(defun mantra-parser-null-state (parser)
+(defun mantra-parser-init (parser)
   "The null parsing state inferred for the current PARSER.
 
 This is the state the parser is always initialized to, and if it is
 the current state of the parser, then that means that it isn't
 currently in the middle of parsing something.
 
-The null state is derived from applying the parser's `map' function to
-the empty vector."
-  (funcall (mantra-parser-map parser)
-           (vector)))
+The null state is derived from the value of INIT recorded at parser
+creation time (see `mantra-make-parser')."
+  (seq-elt parser mantra--index-init))
 
 (defun mantra-parser-state (parser)
   "Get accumulated state in PARSER."
@@ -98,7 +100,7 @@ the empty vector."
 (defun mantra-parser-clear-state (parser)
   "Clear the PARSER's state."
   (mantra-parser-set-state parser
-                           (mantra-parser-null-state parser)))
+                           (mantra-parser-init parser)))
 
 (defun mantra-make-parser (name
                            start
@@ -106,7 +108,8 @@ the empty vector."
                            &optional
                            abort
                            map
-                           compose)
+                           compose
+                           init)
   "Make a parser for keyboard activity.
 
 A parser is a set of criteria for recognizing key sequences, in the
@@ -141,16 +144,19 @@ fresh key sequence at that step.
 
 If no MAP function is provided, the identity function is used as the
 default, so that the parsed value at each step is simply the input key
-sequence.  If no COMPOSE function is provided, it defaults to `vconcat'
+sequence. If no COMPOSE function is provided, it defaults to `vconcat'
 which is appropriate for composing key sequence vectors (i.e., the
-default values if no MAP is specified), so that the resulting parse is
-a single key sequence vector capturing the entire parsed stream.
+default values if no MAP is specified). If no INIT is provided, MAP is
+applied to the empty vector to derive a default initial STATE. The
+resulting parse with these default values is a single key sequence
+vector capturing the entire parsed stream.
 
 The state at the time of acceptance is published as the result of
 parsing."
-  (let ((abort (or abort (lambda (_input _state) nil)))
-        (map (or map #'identity))
-        (compose (or compose #'vconcat)))
+  (let* ((abort (or abort (lambda (_input _state) nil)))
+         (map (or map #'identity))
+         (compose (or compose #'vconcat))
+         (state (or init (funcall map (vector)))))
     (vector name
             start
             stop
@@ -158,7 +164,10 @@ parsing."
             map
             compose
             ;; initialize to null state
-            (funcall map (vector)))))
+            state
+            ;; store the initial state so that when reset, the parser's
+            ;; state returns to this initial value
+            state)))
 
 (defconst mantra-key-sequences-pre-command-topic
   "mantra-key-sequences-pre-command"
@@ -252,7 +261,7 @@ SUBSCRIBER is expected to be a parser, and TOPIC, a string."
 
 (defun mantra-parsing-in-progress-p (parser)
   "Whether PARSER is already parsing, i.e., accumulating state."
-  (not (equal (mantra-parser-null-state parser)
+  (not (equal (mantra-parser-init parser)
               (mantra-parser-state parser))))
 
 (defun mantra-parse (parser input)

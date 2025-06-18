@@ -130,6 +130,21 @@
       ;; perhaps aid garbage collection
       (setq parser nil))))
 
+;; nondefault parser with nondefault state
+(defun fixture-parser-nondefault-state (body)
+  (let ((parser nil))
+    (unwind-protect
+        (progn (setq parser (mantra-make-parser fixture-parser-nondefault-name
+                                                (lambda (_key-seq) t)
+                                                (lambda (_key-seq _state) t)
+                                                (lambda (_key-seq _state) nil)
+                                                #'key-description
+                                                #'concat
+                                                "abc"))
+               (funcall body))
+      ;; perhaps aid garbage collection
+      (setq parser nil))))
+
 (defvar fixture-single-key [108]
   "A sequence representing a single key press (the letter l).")
 
@@ -151,7 +166,15 @@
 
 (defun fixture-nondefault-parser-with-state (body-3)
   (with-fixture fixture-parser-nondefault
-    (mantra-parser-set-state parser fixture-single-key)
+    (mantra-parser-set-state parser
+                             (key-description fixture-single-key))
+    (funcall body-3)))
+
+(defun fixture-nondefault-state-parser-with-state (body-3)
+  (with-fixture fixture-parser-nondefault
+    (mantra-parser-set-state parser
+                             (concat (mantra-parser-state parser)
+                                     (key-description fixture-single-key)))
     (funcall body-3)))
 
 (defun fixture-multi-level-parsers (body-4)
@@ -237,6 +260,10 @@
   (with-fixture fixture-parser-nondefault
     (should (equal "" (mantra-parser-state parser))))
 
+  ;; provided initial state overrides default
+  (with-fixture fixture-parser-nondefault-state
+    (should (equal "abc" (mantra-parser-state parser))))
+
   ;; mantra-parser-map
   (with-fixture fixture-parser-basic
     ;; defaults to identity function
@@ -264,11 +291,17 @@
     ;; clear resets to null state
     (mantra-parser-clear-state parser)
     (should (equal "" (mantra-parser-state parser))))
+  (with-fixture fixture-parser-nondefault-state
+    ;; clear resets to initial state set
+    (mantra-parser-clear-state parser)
+    (should (equal "abc" (mantra-parser-state parser))))
   ;; null state is determined using map on the empty vector
   (with-fixture fixture-parser-basic
-    (should (equal [] (mantra-parser-null-state parser))))
+    (should (equal [] (mantra-parser-init parser))))
   (with-fixture fixture-parser-nondefault
-    (should (equal "" (mantra-parser-null-state parser)))))
+    (should (equal "" (mantra-parser-init parser))))
+  (with-fixture fixture-parser-nondefault-state
+    (should (equal "abc" (mantra-parser-init parser)))))
 
 (ert-deftest mantra-parsing-in-progress-test ()
   (with-fixture fixture-parser-accept-all
@@ -278,6 +311,10 @@
   (with-fixture fixture-parser-nondefault
     (should-not (mantra-parsing-in-progress-p parser)))
   (with-fixture fixture-nondefault-parser-with-state
+    (should (mantra-parsing-in-progress-p parser)))
+  (with-fixture fixture-parser-nondefault-state
+    (should-not (mantra-parsing-in-progress-p parser)))
+  (with-fixture fixture-nondefault-state-parser-with-state
     (should (mantra-parsing-in-progress-p parser))))
 
 (ert-deftest mantra-parse-test ()
