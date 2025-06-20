@@ -16,6 +16,16 @@ mantra
 ===========
 Parse and compose keyboard activity in Emacs.
 
+This package has two main components:
+
+1. *Composing* "mantras" that express any user activity (e.g., keyboard input, inserting and deleting text in a buffer, modulated by conditionals or loops).
+
+2. *Parsing* user activity.
+
+The former is a more general form of keyboard macro, implemented as a DSL. This makes this package something like Selenium, which is used to automate user actions in web browsers.
+
+The latter facility allows you to define what you consider to be "interesting" activity, in arbitrary ways and with great precision, and then take actions when this kind of activity is encountered.
+
 This package could conceivably be used to implement packages resembling yasnippet, evil-repeat, Emacs's keyboard macro ring, Evil jumps and changes, winner mode, and more.
 
 Installation
@@ -32,11 +42,8 @@ Mantra is not on a package archive such as `MELPA <https://melpa.org/>`_ yet, bu
       :host github
       :repo "countvajhula/mantra"))
 
-Use
----
-
 Creating a Parser
-~~~~~~~~~~~~~~~~~
+-----------------
 
 To get started with Mantra, first create a parser.
 
@@ -150,6 +157,27 @@ Now, open the ``*Messages*`` buffer in a window alongside any buffer where you a
                  #'mantra-debug-parser-abort)
 
 As advice is a general way to augment function behavior, you can use this approach to do anything you like in connection with the parsing stages of any particular parser. For instance, you could add additional or alternative conditions for each stage. But this is generally not advisable (so to speak), and it would likely be better to simply write a new parser with the desired functionality rather than override an existing one using advice. Still, knowing this could be useful, as it means parsers used with Mantra are inherently extensible using advice in the same way that Emacs functions are, and with the same caveats.
+
+Composing Mantras
+-----------------
+
+Parsing is one feature of this package. Composition of "mantras" is the other.
+
+With ordinary keyboard macros, the same keys may have a different effect in different contexts. For instance, while inserting text, the Enter key could insert a newline, or, if we happen to be in a completion menu in the context of insertion, Enter may select the highlighted completion and cause its insertion into the buffer --- whatever that completion may be.
+
+We are sometimes interested specifically in inserting some text rather than just typing the letters that may result in such insertion. Mantras are a more general form of keyboard macro that distinguish these forms of user activity. For instance, it sports an explicit ``insertion`` (and also a ``deletion``) form, distinct from elementary key sequences that may be indicated using strings. This is especially valuable in combination with parsing, where we may prefer to parse a particular sequence of user activity as the *insertion* of certain text, rather than as the entry of certain key sequences whose meaning is not captured.
+
+.. code-block:: elisp
+
+  (mantra-eval '(seq ((repetition
+                       (seq ("hello-there"
+                             "M-b"
+                             "M-d"
+                             (insertion "friend ")))
+                       3)
+                      "C-b"
+                      "C-k"
+                      (insertion "!"))))
 
 Troubleshooting
 ---------------
