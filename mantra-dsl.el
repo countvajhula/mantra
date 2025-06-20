@@ -121,7 +121,9 @@ execution."
     (error nil)))
 
 (defun mantra-make-deletion (start count)
-  "A primitive operation to delete COUNT characters from a buffer from position START."
+  "Delete COUNT characters from a buffer from position START.
+
+This is a primitive operation of the DSL."
   `(deletion ,start ,count))
 
 (defun mantra--deletion-start (deletion)
