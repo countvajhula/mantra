@@ -110,14 +110,14 @@ To unsubscribe your printer from the parser:
   (pubsub-unsubscribe "mantra-key-sequences"
                       "my-subscriber")
 
-Obviously, this isn't a very useful parser. You can customize the parsing to your specific needs by modifying the ``start``, ``stop``, and ``abort`` conditions, and by using the ``map`` and ``compose`` arguments to the parser, which allow you to define the nature of the parsed result.
+Obviously, this isn't a very useful parser. You can customize the parsing to your specific needs by modifying the ``start``, ``stop``, and ``abort`` conditions, and by using the ``map``, ``compose``, ``init``, and ``finish`` arguments to the parser, which allow you to define the nature of the parsed result.
 
 Debugging
 ~~~~~~~~~
 
 If a parser isn't behaving as expected, it can be useful to attach debug logs to each stage of the parsing lifecycle.
 
-Since each parsing stage (i.e., *start*, *stop*, and *abort*) is fulfilled by a function, you can simply use Emacs's built-in way to augment function behavior --- *advice* --- to implement the desired debugging!
+You could always add debug logs directly to the functions using ``message``. Another option that could be more flexible in some cases is that since each parsing stage (i.e., *start*, *stop*, and *abort*) is fulfilled by a function, you can simply use Emacs's built-in way to augment function behavior --- *advice* --- to implement the desired debugging!
 
 As always, with advice in Emacs, it's necessary for the parsing functions to be *named functions* rather than anonymous lambdas, and this is why we avoid lambdas in the definition of ``my-key-sequences-parser`` that we saw earlier. Let's look at how we might use advice to implement debug logs, continuing with our earlier example.
 
@@ -157,17 +157,22 @@ Troubleshooting
 No Input?
 ~~~~~~~~~
 
-If you ever write a parser that has an unhandled error in it, Emacs will disable the corresponding listener (in this case, Mantra) on the command loop so that Emacs remains functional. At this point, Mantra parsers will no longer be notified of any activity on the command loop. You might see a sign this has happened in the Messages buffer:
+If you ever write a parser that has an unhandled error in it, the underlying pub/sub broker will unsubscribe the corresponding subscriber. At this point, your parser will no longer be notified of any activity on the command loop. You would see a sign this has happened in the Messages buffer:
 
 .. code-block:: elisp
 
-  Error in post-command-hook (mantra-post-command-listener): (invalid-function [13])
+  Error in subscriber my-subscriber on receiving notice [13] on topic mantra-key-sequences:
+  (invalid-function [13])
+  They have been unsubscribed. Please fix the error and resubscribe.
 
-After fixing the problem, you can reinstate mantra listening on the command loop by calling:
+After fixing the problem, you can resubscribe, for example:
 
 .. code-block:: elisp
 
-  (mantra-connect)
+  (pubsub-subscribe "my-key-sequences"
+                    "my-subscriber"
+                    (lambda (parsed-keys)
+                      (print (key-description parsed-keys))))
 
 Avoiding Memory Leaks
 ~~~~~~~~~~~~~~~~~~~~~
