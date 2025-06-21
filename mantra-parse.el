@@ -110,7 +110,7 @@ creation time (see `mantra-make-parser')."
                            (mantra-parser-init parser)))
 
 (defun mantra-initial-value (value)
-  "Wrapper for an initial VALUE that could be `nil'."
+  "Wrapper for an initial VALUE that could be nil."
   (list 'mantra-initial-value value))
 
 (defun mantra-initial-value-p (value)
@@ -138,24 +138,25 @@ creation time (see `mantra-make-parser')."
 A parser is a set of criteria for recognizing key sequences, in the
 form of a START condition to determine the start of a key sequence of
 interest, a STOP condition to determine the end, and an ABORT
-condition to abort parsing. Matches are published on a pub/sub system
-(using the `pubsub' package), under the topic NAME.
+condition to abort parsing.  Matches are published on a pub/sub system
+\(using the `pubsub' package), under the topic NAME.
 
 NAME is the name of the parser and could be any string, but as it will
 be used as the topic for publishing output in a global pub/sub system,
 it should follow Emacs's naming conventions for global identifiers.
 Specifically, the name should be prefixed with the package name.
 
-The START and STOP conditions are checked in `post-command-hook'. Once
-START is satisfied, the key sequences (themselves, by default) are
-accumulated in the parser state as a composed key sequence (vector).
-When STOP is satisfied (which might happen during invocation of the
-same command, or it might not), a match event is published containing
-the entire sequence in STATE as a single key sequence vector (once
-again, by default. The specific nature of the parsed data can be
-defined using the MAP and COMPOSE predicates, as explained below). If
-ABORT is satisfied during parsing, the state is cleared. If no ABORT
-condition is specified, a default one is used that never aborts.
+The START and STOP conditions are checked in `post-command-hook'.
+Once START is satisfied, the key sequences (themselves, by default)
+are accumulated in the parser state as a composed key sequence
+\(vector).  When STOP is satisfied (which might happen during invocation
+of the same command, or it might not), a match event is published
+containing the entire sequence in STATE as a single key sequence
+vector (once again, by default.  The specific nature of the parsed data
+can be defined using the MAP and COMPOSE predicates, as explained
+below).  If ABORT is satisfied during parsing, the state is cleared.  If
+no ABORT condition is specified, a default one is used that never
+aborts.
 
 MAP and COMPOSE define how the result of parsing is constructed and
 composed.  MAP is a function of one argument that is invoked with the
@@ -167,14 +168,14 @@ fresh key sequence at that step.
 
 If no MAP function is provided, the identity function is used as the
 default, so that the parsed value at each step is simply the input key
-sequence. If no COMPOSE function is provided, it defaults to `vconcat'
+sequence.  If no COMPOSE function is provided, it defaults to `vconcat'
 which is appropriate for composing key sequence vectors (i.e., the
-default values if no MAP is specified). If no INIT is provided, MAP is
-applied to the empty vector to derive a default initial STATE. The
+default values if no MAP is specified).  If no INIT is provided, MAP is
+applied to the empty vector to derive a default initial STATE.  The
 resulting parse with these default values is a single key sequence
 vector capturing the entire parsed stream.
 
-FINISH must be a function of one argument (defaults to `identity'). It
+FINISH must be a function of one argument (defaults to `identity').  It
 will be called with the state at the time of acceptance, and the
 result is published as the result of parsing."
   (let* ((abort (or abort (lambda (_input _state) nil)))
@@ -210,7 +211,7 @@ associated command is executed.
 
 Publishing key sequences read on the Emacs command loop is provided as
 a convenience, as this may be a common input source and it is useful
-to parse it using the standard pub/sub paradigm. It is only relevant
+to parse it using the standard pub/sub paradigm.  It is only relevant
 if `mantra-connect' has been called, i.e., when clients are interested
 in parsing key sequences.")
 
@@ -223,7 +224,7 @@ associated command is executed.
 
 Publishing key sequences read on the Emacs command loop is provided as
 a convenience, as this may be a common input source and it is useful
-to parse it using the standard pub/sub paradigm. It is only relevant
+to parse it using the standard pub/sub paradigm.  It is only relevant
 if `mantra-connect' has been called, i.e., when clients are interested
 in parsing key sequences.")
 
@@ -306,13 +307,13 @@ Otherwise, do nothing.
 
 If parsing is in progress, either prior to or as a result of the
 present invocation, then also check the abort condition for the parser
-to see if parsing should be aborted. This is done at this stage before
+to see if parsing should be aborted.  This is done at this stage before
 the actual command is executed (i.e., not in `mantra-parse'
 like checking the accept predicate) to support avoiding an infinite
 loop in some self-referential cases like repeating the last command.
 
 INPUT could be anything, but may typically be the current key sequence
-entered on the Emacs command loop. Aborting or accepting is based on
+entered on the Emacs command loop.  Aborting or accepting is based on
 the entire parsed state in PARSER, not just the current key sequence."
   (when (or (mantra-parsing-in-progress-p parser)
             (funcall (mantra-parser-start parser)

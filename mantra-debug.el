@@ -24,6 +24,11 @@
 ;;; Code:
 
 (defun mantra-debug-parser-start (orig-fn key-seq)
+  "Print debugging information about the start phase of parsing.
+
+This is intended to be used to advise the start phase of a parser.
+ORIG-FN is the start function, and KEY-SEQ is the currently entered
+key sequence."
   (let ((result (funcall orig-fn key-seq)))
     (message "DEBUG (start): key %s result %s"
              (key-description key-seq)
@@ -32,6 +37,11 @@
     result))
 
 (defun mantra-debug-parser-stop (orig-fn key-seq state)
+  "Print debugging information about the stop phase of parsing.
+
+This is intended to be used to advise the stop phase of a parser.
+ORIG-FN is the stop function, KEY-SEQ is the currently entered key
+sequence, and STATE is the accumulated parser state."
   (let ((result (funcall orig-fn key-seq state)))
     (message "DEBUG (stop): key %s state %s result %s"
              (key-description key-seq)
@@ -41,6 +51,11 @@
     result))
 
 (defun mantra-debug-parser-abort (orig-fn key-seq state)
+  "Print debugging information about the abort phase of parsing.
+
+This is intended to be used to advise the abort phase of a parser.
+ORIG-FN is the abort function, KEY-SEQ is the currently entered key
+sequence, and STATE is the accumulated parser state."
   (let ((result (funcall orig-fn key-seq state)))
     (message "DEBUG (abort): key %s state %s result %s"
              (key-description key-seq)

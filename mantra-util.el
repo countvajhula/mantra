@@ -26,7 +26,7 @@
 (require 'mantra-dsl)
 
 (defun mantra--pretty-print (mantra)
-  "A helper for pretty-printing."
+  "A helper for pretty-printing MANTRA."
   (cond ((vectorp mantra) (key-description mantra))
         ((stringp mantra) mantra)
         ((mantra-seq-p mantra) (mapcar #'mantra--pretty-print

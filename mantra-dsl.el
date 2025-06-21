@@ -28,7 +28,7 @@
 ;; TODO: would it be simpler to use list syntax
 ;; so it's not a list of phases but the phases themselves?
 (defun mantra-make-seq (&rest mantras)
-  "Construct a sequence of mantras."
+  "Construct a sequence of MANTRAS."
   `(seq ,mantras))
 
 (defun mantra-seq-p (obj)
@@ -106,7 +106,7 @@ execution."
     (mantra-make-repetition mantra (when times (1- times)))))
 
 (defun mantra-make-insertion (text)
-  "A primitive operation to insert text into a buffer."
+  "A primitive operation to insert TEXT into a buffer."
   `(insertion ,text))
 
 (defun mantra--insertion-text (insertion)
@@ -197,7 +197,7 @@ concatenation.")
   "Evaluate KEY-VECTOR.
 
 A key vector is a primitive Emacs key sequence and the base case of
-mantra evaluation. It is evaluated using `execute-kbd-macro', and the
+mantra evaluation.  It is evaluated using `execute-kbd-macro', and the
 overall computation is stitched together in terms of the executed key
 and the accumulated result.
 
@@ -233,9 +233,11 @@ rather, a singleton list containing the key."
 (defun mantra-eval-key (key &optional computation result)
   "Evaluate KEY.
 
-A KEY is a string representation of a key sequence. It is translated
+A KEY is a string representation of a key sequence.  It is translated
 in a straightforward way to the primitive key vector representation to
-be evaluated."
+be evaluated.
+
+See `mantra-eval-key-vector' for more on COMPUTATION and RESULT."
   (mantra-eval-key-vector (string-to-vector
                            (kbd key))
                           computation
@@ -247,7 +249,7 @@ be evaluated."
 Attempts the seq in the order of its phases.  The seq
 succeeds only if all of the phases succeed, and otherwise fails.
 
-See `mantra-eval-move' for more on COMPUTATION and RESULT."
+See `mantra-eval-key-vector' for more on COMPUTATION and RESULT."
   (if (mantra--seq-null-p seq)
       result
     (let ((current-phase (mantra--seq-first seq))
@@ -288,7 +290,9 @@ See `mantra-eval-key' for more on COMPUTATION and RESULT."
 
 An insertion when evaluated inserts text into the buffer.
 
-Like key vectors, this is a primitive operation of the Mantra DSL."
+Like key vectors, this is a primitive operation of the Mantra DSL.
+
+See `mantra-eval-key-vector' for more on COMPUTATION and RESULT."
   (let ((text (mantra--insertion-text insertion))
         (result (or result
                     (funcall (mantra--computation-map computation)
@@ -301,7 +305,9 @@ Like key vectors, this is a primitive operation of the Mantra DSL."
 
 An deletion when evaluated deletes text from the buffer.
 
-Like key vectors, this is a primitive operation of the Mantra DSL."
+Like key vectors, this is a primitive operation of the Mantra DSL.
+
+See `mantra-eval-key-vector' for more on COMPUTATION and RESULT."
   (let* ((current-position (point))
          (start (+ current-position (mantra--deletion-start deletion)))
          (count (mantra--deletion-count deletion))
@@ -315,7 +321,7 @@ Like key vectors, this is a primitive operation of the Mantra DSL."
 (defun mantra--eval (mantra computation result)
   "Helper to evaluate MANTRA.
 
-See `mantra-eval-move' for more on COMPUTATION and RESULT."
+See `mantra-eval-key-vector' for more on COMPUTATION and RESULT."
   (cond ((mantra-repetition-p mantra)
          (mantra-eval-repetition mantra
                                  computation
@@ -357,7 +363,7 @@ See `mantra-eval-move' for more on COMPUTATION and RESULT."
   "Recite (evaluate) a MANTRA.
 
 MANTRA could be a primitive key sequence, a sequence of mantras, or
-any other mantra. If it is not a specific mantra form, then it is
+any other mantra.  If it is not a specific mantra form, then it is
 assumed to be an ELisp function, and the rule for interpretation is to
 apply the function.
 
@@ -369,7 +375,7 @@ This function, along with any of the more specific mantra evaluators
 such as `mantra-eval-seq', evaluates to a COMPUTATION on the mantra
 actually recited.
 
-See `mantra-eval-key' for more on COMPUTATION and RESULT."
+See `mantra-eval-key-vector' for more on COMPUTATION and RESULT."
   (let* ((computation (if computation
                           computation
                         mantra--computation-default))
