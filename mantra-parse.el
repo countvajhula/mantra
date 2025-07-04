@@ -1,4 +1,4 @@
-;;; mantra-parse.el --- Mantras, not macros! -*- lexical-binding: t -*-
+;;; mantra-parse.el --- A system for scripting and parsing activity beyond macros. -*- lexical-binding: t -*-
 
 ;; This file is NOT a part of Gnu Emacs.
 
