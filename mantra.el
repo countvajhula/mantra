@@ -1,4 +1,4 @@
-;;; mantra.el ---  A system for scripting and parsing activity beyond macros. -*- lexical-binding: t -*-
+;;; mantra.el ---  A system for scripting and parsing activity beyond macros -*- lexical-binding: t -*-
 
 ;; Author: Sid Kasivajhula <sid@countvajhula.com>
 ;; URL: https://github.com/countvajhula/mantra
