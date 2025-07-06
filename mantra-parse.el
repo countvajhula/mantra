@@ -115,8 +115,8 @@ creation time (see `mantra-make-parser')."
 
 (defun mantra-initial-value-p (value)
   "Is VALUE a `mantra-initial-value'?"
-  (and (listp value)
-       (not (null value))
+  (and value
+       (listp value)
        (eq 'mantra-initial-value
            (car value))))
 
