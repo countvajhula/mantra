@@ -105,13 +105,25 @@ execution."
         (times (mantra--repetition-times repetition)))
     (mantra-make-repetition mantra (when times (1- times)))))
 
-(defun mantra-make-insertion (text)
-  "A primitive operation to insert TEXT into a buffer."
-  `(insertion ,text))
+(defun mantra-make-insertion (text &optional offset move-point)
+  "A primitive operation to insert TEXT into a buffer.
+
+The text is inserted at an OFFSET relative to point. If MOVE-POINT is
+non-nil, then point is moved to the end of the inserted text.
+Otherwise, it remains at its original location."
+  `(insertion ,text ,(or offset 0) ,(or move-point nil)))
 
 (defun mantra--insertion-text (insertion)
   "The text to insert in INSERTION."
   (cadr insertion))
+
+(defun mantra--insertion-offset (insertion)
+  "The offset of INSERTION relative to point."
+  (caddr insertion))
+
+(defun mantra--insertion-move-point (insertion)
+  "Whether to move point to the end of inserted text."
+  (cadddr insertion))
 
 (defun mantra-insertion-p (obj)
   "Check if OBJ specifies an insertion."
@@ -294,10 +306,20 @@ Like key vectors, this is a primitive operation of the Mantra DSL.
 
 See `mantra-eval-key-vector' for more on COMPUTATION and RESULT."
   (let ((text (mantra--insertion-text insertion))
+        (offset (mantra--insertion-offset insertion))
+        (move-point (mantra--insertion-move-point insertion))
         (result (or result
                     (funcall (mantra--computation-map computation)
                              mantra--null))))
-    (insert text)
+    ;; TODO: when attempting to move to an invalid point at BOB or EOB,
+    ;; handle the error here, log it, and terminate the traversal (likely
+    ;; requires an internal error signal for the evaluator to handle)
+    (if move-point
+        (progn (forward-char offset)
+               (insert text))
+      (save-excursion
+        (forward-char offset)
+        (insert text)))
     result))
 
 (defun mantra-eval-deletion (deletion &optional computation result)

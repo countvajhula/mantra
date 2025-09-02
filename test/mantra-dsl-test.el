@@ -103,15 +103,38 @@
 (ert-deftest insertion-test ()
   (let ((result))
     (with-fixture fixture-empty-buffer
-      (mantra-eval '(insertion "a")))
+      (mantra-eval '(insertion "a" 0 t)))
     (should
      (equal "a"
             result)))
   (let ((result))
     (with-fixture fixture-empty-buffer
-      (mantra-eval '(insertion "hello C-c C-v M-f there")))
+      (mantra-eval '(insertion "hello C-c C-v M-f there" 0 t)))
     (should
      (equal "hello C-c C-v M-f there"
+            result)))
+  (let ((result))
+    ;; nonzero offset
+    (with-fixture fixture-nonempty-buffer
+                  (mantra-eval '(insertion "a" -1 t)))
+    (should
+     (equal "hellao"
+            result)))
+  (let ((result))
+    ;; move point
+    (with-fixture fixture-empty-buffer
+                  (mantra-eval '(seq ((insertion "a" 0 t)
+                                      (insertion "b" 0 t)))))
+    (should
+     (equal "ab"
+            result)))
+  (let ((result))
+    ;; preserve point
+    (with-fixture fixture-empty-buffer
+                  (mantra-eval '(seq ((insertion "a" 0 nil)
+                                      (insertion "b" 0 nil)))))
+    (should
+     (equal "ba"
             result))))
 
 (ert-deftest deletion-test ()
@@ -163,7 +186,7 @@
     (with-fixture fixture-empty-buffer
       (mantra-eval '(seq ((repetition "a" 3)
                           "b"
-                          (insertion "c")
+                          (insertion "c" 0 t)
                           (lambda (&rest args)
                             (insert "def"))))))
     (should
@@ -175,7 +198,7 @@
     (with-fixture fixture-empty-buffer
       (mantra-eval '(seq ((repetition "a" 3)
                           "b"
-                          (insertion "c")
+                          (insertion "c" 0 t)
                           (lambda (&rest args)
                             (insert "def"))))
                    (mantra-make-computation :map #'list
@@ -189,7 +212,7 @@
     (let ((result
            (mantra-eval '(seq ((repetition "a" 3)
                                "b"
-                               (insertion "c")
+                               (insertion "c" 0 t)
                                (lambda (computation result)
                                  (insert "def")
                                  result)))
