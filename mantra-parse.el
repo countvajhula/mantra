@@ -215,6 +215,8 @@ to parse it using the standard pub/sub paradigm.  It is only relevant
 if `mantra-connect' has been called, i.e., when clients are interested
 in parsing key sequences.")
 
+(defvaralias 'mantra-key-sequences-topic 'mantra-key-sequences-post-command-topic)
+
 (defconst mantra-key-sequences-post-command-topic
   "mantra-key-sequences-post-command"
   "The topic under which elementary key sequences will be published.
@@ -227,8 +229,6 @@ a convenience, as this may be a common input source and it is useful
 to parse it using the standard pub/sub paradigm.  It is only relevant
 if `mantra-connect' has been called, i.e., when clients are interested
 in parsing key sequences.")
-
-(defvaralias 'mantra-key-sequences-topic 'mantra-key-sequences-post-command-topic)
 
 (defun mantra-pre-command-listener ()
   "Listen for the key sequences on the Emacs command loop.
