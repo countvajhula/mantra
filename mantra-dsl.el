@@ -153,6 +153,21 @@ This is a primitive operation of the DSL."
           (nth 0 obj))
     (error nil)))
 
+(defun mantra-make-move (offset)
+  "A primitive operation to move point by OFFSET within a buffer."
+  `(move ,offset))
+
+(defun mantra--move-offset (move)
+  "The amount to move by in MOVE."
+  (cadr move))
+
+(defun mantra-move-p (obj)
+  "Check if OBJ specifies a move."
+  (condition-case nil
+      (eq 'move
+          (nth 0 obj))
+    (error nil)))
+
 (defun mantra-p (obj)
   "Check if OBJ specifies a mantra."
   (or (vectorp obj)
@@ -160,7 +175,8 @@ This is a primitive operation of the DSL."
       (mantra-seq-p obj)
       (mantra-repetition-p obj)
       (mantra-insertion-p obj)
-      (mantra-deletion-p obj)))
+      (mantra-deletion-p obj)
+      (mantra-move-p obj)))
 
 (defconst mantra--null (vector)
   "The null mantra.")
@@ -340,6 +356,24 @@ See `mantra-eval-key-vector' for more on COMPUTATION and RESULT."
     (delete-region start end)
     result))
 
+(defun mantra-eval-move (move &optional computation result)
+  "Evaluate MOVE.
+
+A move when evaluated moves point within the buffer.
+
+Like key vectors, this is a primitive operation of the Mantra DSL.
+
+See `mantra-eval-key-vector' for more on COMPUTATION and RESULT."
+  (let ((offset (mantra--move-offset move))
+        (result (or result
+                    (funcall (mantra--computation-map computation)
+                             mantra--null))))
+    ;; TODO: handle invalid move past BOB or EOB
+    ;; by terminating traversal but containing the error
+    ;; within mantra (see `mantra-eval-insertion')
+    (forward-char offset)
+    result))
+
 (defun mantra--eval (mantra computation result)
   "Helper to evaluate MANTRA.
 
@@ -360,6 +394,10 @@ See `mantra-eval-key-vector' for more on COMPUTATION and RESULT."
          (mantra-eval-deletion mantra
                                computation
                                result))
+        ((mantra-move-p mantra)
+         (mantra-eval-move mantra
+                           computation
+                           result))
         ((stringp mantra)
          (mantra-eval-key mantra
                           computation

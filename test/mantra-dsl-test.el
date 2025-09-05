@@ -146,6 +146,16 @@
      (equal "ho"
             result))))
 
+(ert-deftest move-test ()
+  (let ((result))
+    (with-fixture fixture-nonempty-buffer
+                  (goto-char 0)
+                  (mantra-eval '(move 2))
+                  (kill-region (point) (point-max)))
+    (should
+     (equal "he"
+            result))))
+
 (ert-deftest fallback-test ()
   (let ((result))
     (with-fixture fixture-empty-buffer
