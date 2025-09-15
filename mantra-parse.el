@@ -23,6 +23,7 @@
 
 ;;; Code:
 
+(require 'seq)
 (require 'pubsub)
 
 (defconst mantra--index-name 0

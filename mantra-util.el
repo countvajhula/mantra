@@ -23,6 +23,7 @@
 
 ;;; Code:
 
+(require 'subr-x)  ; for `string-join' on older Emacs
 (require 'mantra-dsl)
 
 (defun mantra--pretty-print (mantra)

@@ -30,6 +30,7 @@
                (concat mantra-test-setup-directory dir)))
 ;;
 
+(require 'seq)
 (require 'mantra-parse)
 
 ;;
