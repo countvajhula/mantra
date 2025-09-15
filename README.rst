@@ -1,8 +1,8 @@
 .. image:: https://github.com/countvajhula/mantra/actions/workflows/test.yml/badge.svg
     :target: https://github.com/countvajhula/mantra/actions
 
-.. image:: https://coveralls.io/repos/github/countvajhula/mantra/badge.svg?branch=master
-    :target: https://coveralls.io/github/countvajhula/mantra?branch=master
+.. image:: https://coveralls.io/repos/github/countvajhula/mantra/badge.svg?branch=main
+    :target: https://coveralls.io/github/countvajhula/mantra?branch=main
 
 .. image:: https://melpa.org/packages/mantra-badge.svg
     :alt: MELPA
