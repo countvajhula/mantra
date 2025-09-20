@@ -108,8 +108,8 @@ execution."
 (defun mantra-make-insertion (text &optional offset move-point)
   "A primitive operation to insert TEXT into a buffer.
 
-The text is inserted at an OFFSET relative to point. If MOVE-POINT is
-non-nil, then point is moved to the end of the inserted text.
+The text is inserted at an OFFSET relative to point.  If MOVE-POINT
+is non-nil, then point is moved to the end of the inserted text.
 Otherwise, it remains at its original location."
   `(insertion ,text ,(or offset 0) ,(or move-point nil)))
 
@@ -122,7 +122,9 @@ Otherwise, it remains at its original location."
   (caddr insertion))
 
 (defun mantra--insertion-move-point (insertion)
-  "Whether to move point to the end of inserted text."
+  "Whether to move point to the end of inserted text.
+
+INSERTION is the text to be inserted."
   (cadddr insertion))
 
 (defun mantra-insertion-p (obj)
