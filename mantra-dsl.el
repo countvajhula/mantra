@@ -155,6 +155,28 @@ This is a primitive operation of the DSL."
           (nth 0 obj))
     (error nil)))
 
+(defun mantra-make-command (cmd &optional args)
+  "A primitive operation to execute a command, CMD.
+
+If arguments ARGS are provided, those are passed in the command
+invocation."
+  `(command ,cmd ,args))
+
+(defun mantra--command-cmd (command)
+  "The command in COMMAND."
+  (cadr command))
+
+(defun mantra--command-args (command)
+  "The arguments passed to COMMAND."
+  (caddr command))
+
+(defun mantra-command-p (obj)
+  "Check if OBJ specifies a command."
+  (condition-case nil
+      (eq 'command
+          (nth 0 obj))
+    (error nil)))
+
 (defun mantra-make-move (offset)
   "A primitive operation to move point by OFFSET within a buffer."
   `(move ,offset))
@@ -178,6 +200,7 @@ This is a primitive operation of the DSL."
       (mantra-repetition-p obj)
       (mantra-insertion-p obj)
       (mantra-deletion-p obj)
+      (mantra-command-p obj)
       (mantra-move-p obj)))
 
 (defconst mantra--null (vector)
@@ -358,6 +381,22 @@ See `mantra-eval-key-vector' for more on COMPUTATION and RESULT."
     (delete-region start end)
     result))
 
+(defun mantra-eval-command (command &optional computation result)
+  "Evaluate COMMAND.
+
+This simply evaluates the command, which could have any effect.
+
+Like key vectors, this is a primitive operation of the Mantra DSL.
+
+See `mantra-eval-key-vector' for more on COMPUTATION and RESULT."
+  (let ((cmd (mantra--command-cmd command))
+        (args (mantra--command-args command))
+        (result (or result
+                    (funcall (mantra--computation-map computation)
+                             mantra--null))))
+    (apply cmd args)
+    result))
+
 (defun mantra-eval-move (move &optional computation result)
   "Evaluate MOVE.
 
@@ -396,6 +435,10 @@ See `mantra-eval-key-vector' for more on COMPUTATION and RESULT."
          (mantra-eval-deletion mantra
                                computation
                                result))
+        ((mantra-command-p mantra)
+         (mantra-eval-command mantra
+                              computation
+                              result))
         ((mantra-move-p mantra)
          (mantra-eval-move mantra
                            computation

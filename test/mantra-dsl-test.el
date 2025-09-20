@@ -146,6 +146,19 @@
      (equal "ho"
             result))))
 
+(defun my-insert-hello ()
+  "Insert hello into the buffer."
+  (interactive)
+  (insert "hello"))
+
+(ert-deftest command-test ()
+  (let ((result))
+    (with-fixture fixture-empty-buffer
+      (mantra-eval '(command my-insert-hello)))
+    (should
+     (equal "hello"
+            result))))
+
 (ert-deftest move-test ()
   (let ((result))
     (with-fixture fixture-nonempty-buffer
