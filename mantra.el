@@ -2,7 +2,7 @@
 
 ;; Author: Sid Kasivajhula <sid@countvajhula.com>
 ;; URL: https://github.com/countvajhula/mantra
-;; Version: 0.1
+;; Version: 0.2
 ;; Package-Requires: ((emacs "27.1") (pubsub "0.1"))
 
 ;; This file is NOT a part of Gnu Emacs.
